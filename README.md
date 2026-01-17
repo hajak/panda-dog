@@ -5,11 +5,18 @@ A modern isometric action/stealth platformer built with PixiJS and TypeScript.
 ## Quick Start
 
 ```bash
+# Clone the repo
+git clone https://github.com/hajak/last-ninja.git
+cd last-ninja
+
+# Install dependencies
 pnpm install
+
+# Run dev server
 pnpm dev
 ```
 
-Open http://localhost:3000 in your browser.
+Open **http://localhost:5173** in your browser.
 
 ## Controls
 
@@ -24,7 +31,10 @@ Open http://localhost:3000 in your browser.
 | E | Interact |
 | 1-3 | Quick inventory slots |
 | Escape | Pause |
-| F | Toggle debug info |
+| H | Help / Controls |
+| § | Debug mode (2D view) |
+| V | Toggle vision cones |
+| G | Toggle grid |
 
 ## Project Structure
 
