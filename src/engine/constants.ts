@@ -40,12 +40,12 @@ export const PLAYER_CLIMB_SPEED = 2;
 
 // Combat
 export const LIGHT_ATTACK_COMBO_WINDOW = 400;
-export const KNOCKBACK_FORCE = 150;
+export const KNOCKBACK_FORCE = 18; // Balanced knockback
 export const PROJECTILE_SPEED = 500;
 
 // AI
-export const GUARD_PATROL_SPEED = 2;
-export const GUARD_CHASE_SPEED = 4;
+export const GUARD_PATROL_SPEED = 1.5; // Reduced from 2
+export const GUARD_CHASE_SPEED = 3; // Reduced from 4
 export const GUARD_VISION_RANGE = 6;
 export const GUARD_VISION_ANGLE = Math.PI / 3; // 60 degrees
 export const ARCHER_ATTACK_RANGE = 8;

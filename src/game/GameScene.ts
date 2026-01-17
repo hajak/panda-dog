@@ -339,6 +339,13 @@ export class GameScene {
     const nearest = this.interactables.findNearest(this.player.position, 1.5);
 
     if (nearest && nearest.state !== 'used') {
+      // Auto-pickup for health and shuriken pickups
+      if (nearest.type === 'pickup_health' || nearest.type === 'pickup_shuriken') {
+        this.handleInteraction(nearest.id);
+        this.nearbyInteractable = null;
+        return;
+      }
+
       this.nearbyInteractable = {
         id: nearest.id,
         promptText: nearest.promptText,
@@ -836,6 +843,9 @@ export class GameScene {
     if (helpPanel) {
       const isVisible = helpPanel.classList.contains('help-panel--visible');
       helpPanel.classList.toggle('help-panel--visible', !isVisible);
+
+      // Pause game when help is open, unpause when closed
+      this.paused = !isVisible;
 
       // Hide the hint once help has been opened
       if (helpHint && !isVisible) {

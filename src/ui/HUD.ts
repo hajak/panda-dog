@@ -2,6 +2,52 @@
    SHADOW NINJA - HUD Component
    ============================================ */
 
+function createHelpPanel(): void {
+  // Check if already exists
+  if (document.getElementById('help-panel')) return;
+
+  const helpPanel = document.createElement('div');
+  helpPanel.className = 'help-panel';
+  helpPanel.id = 'help-panel';
+  helpPanel.innerHTML = `
+    <div class="panel">
+      <div class="panel__header">
+        <span class="panel__title">Controls</span>
+        <span class="help-panel__close">[H] Close</span>
+      </div>
+      <div class="panel__body">
+        <div class="help-section">
+          <h4 class="help-section__title">Movement</h4>
+          <div class="help-row"><span class="help-key">WASD</span><span>Move</span></div>
+          <div class="help-row"><span class="help-key">Shift</span><span>Run (drains stamina)</span></div>
+          <div class="help-row"><span class="help-key">Space</span><span>Jump / Climb</span></div>
+        </div>
+        <div class="help-section">
+          <h4 class="help-section__title">Combat</h4>
+          <div class="help-row"><span class="help-key">J</span><span>Attack (combo)</span></div>
+          <div class="help-row"><span class="help-key">K</span><span>Block (hold for parry)</span></div>
+          <div class="help-row"><span class="help-key">L</span><span>Throw shuriken</span></div>
+        </div>
+        <div class="help-section">
+          <h4 class="help-section__title">Other</h4>
+          <div class="help-row"><span class="help-key">E</span><span>Interact</span></div>
+          <div class="help-row"><span class="help-key">1-3</span><span>Select item slot</span></div>
+          <div class="help-row"><span class="help-key">Esc</span><span>Pause</span></div>
+        </div>
+        <div class="help-section">
+          <h4 class="help-section__title">Debug</h4>
+          <div class="help-row"><span class="help-key">§</span><span>Toggle debug view</span></div>
+          <div class="help-row"><span class="help-key">V</span><span>Toggle vision cones</span></div>
+          <div class="help-row"><span class="help-key">G</span><span>Toggle grid</span></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Append directly to body for proper z-index stacking above debug mode
+  document.body.appendChild(helpPanel);
+}
+
 export function createHUD(): HTMLElement {
   const container = document.createElement('div');
   container.className = 'hud';
@@ -131,45 +177,13 @@ export function createHUD(): HTMLElement {
       <div class="debug-panel__row"><span class="debug-panel__label">Pos:</span> 0, 0</div>
     </div>
 
-    <!-- Help Panel -->
-    <div class="help-panel" id="help-panel">
-      <div class="panel">
-        <div class="panel__header">
-          <span class="panel__title">Controls</span>
-          <span class="help-panel__close">[H] Close</span>
-        </div>
-        <div class="panel__body">
-          <div class="help-section">
-            <h4 class="help-section__title">Movement</h4>
-            <div class="help-row"><span class="help-key">WASD</span><span>Move</span></div>
-            <div class="help-row"><span class="help-key">Shift</span><span>Run (drains stamina)</span></div>
-            <div class="help-row"><span class="help-key">Space</span><span>Jump / Climb</span></div>
-          </div>
-          <div class="help-section">
-            <h4 class="help-section__title">Combat</h4>
-            <div class="help-row"><span class="help-key">J</span><span>Attack (combo)</span></div>
-            <div class="help-row"><span class="help-key">K</span><span>Block (hold for parry)</span></div>
-            <div class="help-row"><span class="help-key">L</span><span>Throw shuriken</span></div>
-          </div>
-          <div class="help-section">
-            <h4 class="help-section__title">Other</h4>
-            <div class="help-row"><span class="help-key">E</span><span>Interact</span></div>
-            <div class="help-row"><span class="help-key">1-3</span><span>Select item slot</span></div>
-            <div class="help-row"><span class="help-key">Esc</span><span>Pause</span></div>
-          </div>
-          <div class="help-section">
-            <h4 class="help-section__title">Debug</h4>
-            <div class="help-row"><span class="help-key">§</span><span>Toggle debug panel</span></div>
-            <div class="help-row"><span class="help-key">V</span><span>Toggle vision cones</span></div>
-            <div class="help-row"><span class="help-key">G</span><span>Toggle grid</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Press H for Help hint -->
     <div class="help-hint" id="help-hint">Press [H] for controls</div>
   `;
+
+  // Create help panel separately and append to body for proper z-index stacking
+  createHelpPanel();
+
 
   return container;
 }
