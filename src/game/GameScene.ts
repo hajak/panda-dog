@@ -178,14 +178,8 @@ export class GameScene {
     this.entityLayer.addChild(this.player.container);
     this.entities.push(this.player);
 
-    // Set up camera
+    // Set up camera - follow player without restrictive bounds
     this.camera.snapToTarget(this.player.position);
-    this.camera.setBounds(
-      -CANVAS_WIDTH / 4,
-      -CANVAS_HEIGHT / 4,
-      levelData.width * 32 + CANVAS_WIDTH / 4,
-      levelData.height * 16 + CANVAS_HEIGHT / 4
-    );
 
     // Start game loop
     this.lastTime = performance.now();
@@ -423,11 +417,33 @@ export class GameScene {
     for (const enemy of this.enemies) {
       if (!enemy.active) continue;
 
+      // Store position before AI update
+      const prevX = enemy.position.x;
+      const prevY = enemy.position.y;
+
       // Check if enemy can see the player
       const canSeePlayer = enemy.canSee(this.player, this.checkLineOfSight.bind(this));
 
       // Update AI behavior
       enemy.updateAI(deltaTime, this.player, canSeePlayer);
+
+      // Validate enemy movement with collision system
+      if (this.collision) {
+        const canMove = this.collision.canMoveTo(
+          { x: prevX, y: prevY, z: enemy.position.z },
+          enemy.position.x,
+          enemy.position.y
+        );
+
+        if (!canMove) {
+          // Revert to previous position if move is invalid
+          enemy.position.x = prevX;
+          enemy.position.y = prevY;
+        } else {
+          // Update enemy's z position to match ground elevation
+          enemy.position.z = this.collision.getGroundElevation(enemy.position);
+        }
+      }
 
       // Update vision cone visualization
       enemy.updateVisionConeVisual(this.debugOptions.showVisionCones);

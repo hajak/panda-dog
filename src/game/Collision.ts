@@ -218,6 +218,23 @@ export class CollisionSystem {
   }
 
   /**
+   * Check if an entity can move from one position to another
+   * Used for enemy movement validation
+   */
+  canMoveTo(from: WorldPos, toX: number, toY: number): boolean {
+    const result = this.tryMove(from, toX, toY);
+    return result.valid;
+  }
+
+  /**
+   * Get ground elevation at a position
+   */
+  getGroundElevation(pos: WorldPos): number {
+    const tile = this.tilemap.getTileAtWorld(pos);
+    return tile?.elevation ?? 0;
+  }
+
+  /**
    * Get all tiles within a radius (for area checks)
    */
   getTilesInRadius(center: WorldPos, radius: number): TileData[] {

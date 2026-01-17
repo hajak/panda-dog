@@ -12,7 +12,7 @@ export const GRID_WIDTH = 20;
 export const GRID_HEIGHT = 20;
 
 // Camera settings
-export const CAMERA_DAMPING = 0.08;
+export const CAMERA_DAMPING = 1.0;
 export const CAMERA_ZOOM_LEVELS = [0.75, 1.0, 1.5] as const;
 export const DEFAULT_ZOOM_INDEX = 1;
 

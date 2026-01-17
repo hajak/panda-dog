@@ -305,6 +305,6 @@ export class Tilemap {
       return createIsoBlock(colors[tile.type], 1.5, 1, 1);
     }
 
-    return createIsoTile(colors[tile.type], tile.elevation, patterns[tile.type]);
+    return createIsoTile(colors[tile.type], tile.elevation, patterns[tile.type], tile.hidingSpot);
   }
 }

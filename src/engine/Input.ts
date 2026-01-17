@@ -38,7 +38,12 @@ const KEY_BINDINGS: KeyMap = {
   KeyG: ['toggleGrid', 'toggleGridPressed'],
   KeyH: ['toggleHelp', 'toggleHelpPressed'],
   IntlBackslash: ['toggleDebugUI', 'toggleDebugUIPressed'],
+  Backquote: ['toggleDebugUI', 'toggleDebugUIPressed'],
+  DebugUIKey: ['toggleDebugUI', 'toggleDebugUIPressed'],
 };
+
+// Keys that should trigger debug UI by their character value (for § key on Nordic keyboards)
+const DEBUG_UI_KEYS = new Set(['§', '`']);
 
 const POSITIVE_KEYS = new Set([
   'KeyD',
@@ -99,6 +104,17 @@ export class Input {
     if (event.repeat) return;
 
     const code = event.code;
+
+    // Handle § key by character for Nordic keyboard layouts
+    if (DEBUG_UI_KEYS.has(event.key)) {
+      if (!this.keysDown.has('DebugUIKey')) {
+        this.keysDown.add('DebugUIKey');
+        this.keysPressed.add('DebugUIKey');
+      }
+      event.preventDefault();
+      return;
+    }
+
     if (!this.keysDown.has(code)) {
       this.keysDown.add(code);
       this.keysPressed.add(code);
@@ -111,6 +127,11 @@ export class Input {
   };
 
   private onKeyUp = (event: KeyboardEvent): void => {
+    // Handle § key by character for Nordic keyboard layouts
+    if (DEBUG_UI_KEYS.has(event.key)) {
+      this.keysDown.delete('DebugUIKey');
+      return;
+    }
     this.keysDown.delete(event.code);
   };
 

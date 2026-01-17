@@ -189,11 +189,12 @@ export class PropManager {
 
   /**
    * Apply camera transform
+   * Note: Parent layer already has camera transform applied by Tilemap,
+   * so we don't apply it again here to avoid double transformation
    */
-  applyCamera(offsetX: number, offsetY: number, zoom: number): void {
-    this.container.x = offsetX;
-    this.container.y = offsetY;
-    this.container.scale.set(zoom);
+  applyCamera(_offsetX: number, _offsetY: number, _zoom: number): void {
+    // Camera transform is already applied to parent layer by Tilemap
+    // No additional transform needed here
   }
 
   /**

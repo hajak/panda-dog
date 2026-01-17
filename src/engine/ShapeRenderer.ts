@@ -12,7 +12,8 @@ import { TILE_WIDTH, TILE_HEIGHT, TILE_DEPTH, COLORS, LIGHT_DIRECTION } from './
 export function createIsoTile(
   color: number,
   elevation: number = 0,
-  pattern?: 'solid' | 'grass' | 'stone' | 'water'
+  pattern?: 'solid' | 'grass' | 'stone' | 'water',
+  isHidingSpot: boolean = false
 ): Graphics {
   const g = new Graphics();
   const hw = TILE_WIDTH / 2;
@@ -56,7 +57,11 @@ export function createIsoTile(
 
   // Add pattern details
   if (pattern === 'grass') {
-    addGrassPattern(g, hw, hh);
+    if (isHidingSpot) {
+      addTallGrassPattern(g, hw, hh);
+    } else {
+      addGrassPattern(g, hw, hh);
+    }
   } else if (pattern === 'stone') {
     addStonePattern(g, hw, hh);
   } else if (pattern === 'water') {
@@ -478,6 +483,45 @@ function addGrassPattern(g: Graphics, hw: number, hh: number): void {
     g.lineTo(x - 1, y - 4);
     g.lineTo(x + 1, y - 3);
     g.stroke({ color: grassColor, width: 1, alpha: 0.5 });
+  }
+}
+
+function addTallGrassPattern(g: Graphics, hw: number, hh: number): void {
+  // Add tall grass for hiding spots - much denser and taller
+  const grassColors = [0x2e7d32, 0x388e3c, 0x43a047, 0x4caf50];
+
+  // Draw many tall grass blades
+  for (let i = 0; i < 20; i++) {
+    const x = (Math.random() - 0.5) * hw * 1.4;
+    const y = (Math.random() - 0.5) * hh * 1.2;
+    const height = 10 + Math.random() * 14; // Tall grass (10-24 pixels)
+    const color = grassColors[Math.floor(Math.random() * grassColors.length)];
+    const sway = (Math.random() - 0.5) * 4; // Random sway direction
+
+    // Draw grass blade as a thin triangle
+    g.moveTo(x - 1, y);
+    g.lineTo(x + sway, y - height);
+    g.lineTo(x + 1, y);
+    g.closePath();
+    g.fill({ color, alpha: 0.9 });
+  }
+
+  // Add some grass tufts (clusters)
+  for (let i = 0; i < 6; i++) {
+    const cx = (Math.random() - 0.5) * hw * 0.8;
+    const cy = (Math.random() - 0.5) * hh * 0.6;
+    const color = grassColors[Math.floor(Math.random() * grassColors.length)];
+
+    // Draw a small grass tuft
+    for (let j = 0; j < 3; j++) {
+      const offsetX = (j - 1) * 3;
+      const height = 12 + Math.random() * 8;
+      g.moveTo(cx + offsetX - 1, cy);
+      g.lineTo(cx + offsetX + (Math.random() - 0.5) * 2, cy - height);
+      g.lineTo(cx + offsetX + 1, cy);
+      g.closePath();
+      g.fill({ color, alpha: 0.85 });
+    }
   }
 }
 
