@@ -70,7 +70,10 @@ export class Character {
     const sprite = new Container();
 
     if (this.role === 'dog') {
-      return this.createDogSprite(sprite);
+      const result = this.createDogSprite(sprite);
+      // Dog is smaller than Panda (scout vs. heavy lifter)
+      sprite.scale.set(0.7);
+      return result;
     } else {
       return this.createPandaSprite(sprite);
     }

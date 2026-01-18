@@ -1,6 +1,6 @@
 {
   "name": "panda-dog",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Panda & Dog - Cooperative puzzle game with asymmetric roles",
   "private": true,
   "type": "module",

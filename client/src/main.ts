@@ -11,7 +11,7 @@ import { createHelpScreen } from './ui/HelpScreen';
 import { DebugUI } from './ui/DebugUI';
 import { networkClient } from './net/NetworkClient';
 
-const VERSION = '2.1.0';
+const VERSION = '2.2.0';
 
 let lobby: LobbyUI | null = null;
 let errorToast: HTMLElement | null = null;

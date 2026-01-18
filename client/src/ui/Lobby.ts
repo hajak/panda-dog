@@ -7,7 +7,7 @@ import QRCode from 'qrcode';
 import { networkClient, type NetworkEvent } from '@net/NetworkClient';
 import type { Role } from '@shared/types';
 
-const VERSION = '2.1.0';
+const VERSION = '2.2.0';
 
 export type LobbyState = 'initial' | 'connecting' | 'creating' | 'waiting' | 'ready' | 'starting';
 
