@@ -2,7 +2,7 @@
 nixPkgs = ["nodejs_18", "pnpm"]
 
 [phases.install]
-cmds = ["pnpm install:all"]
+cmds = ["pnpm config set enable-pre-post-scripts true", "pnpm install:all"]
 
 [phases.build]
 cmds = ["pnpm build"]
