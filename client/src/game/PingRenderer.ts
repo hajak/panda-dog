@@ -5,7 +5,7 @@
 
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { worldToScreen, getDepthValue } from '../engine/isometric';
-import type { PingMarker, WorldPos } from '@shared/types';
+import type { PingMarker, WorldPos, Role } from '@shared/types';
 
 const PING_COLORS = {
   look: 0xffff00,      // Yellow
@@ -25,7 +25,7 @@ const PING_ICONS = {
 
 export class PingRenderer {
   readonly id: string;
-  readonly createdBy: string;
+  readonly createdBy: Role;
 
   container: Container;
   private graphics: Graphics;

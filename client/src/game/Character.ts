@@ -7,6 +7,13 @@ import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { worldToScreen, getDepthValue } from '../engine/isometric';
 import type { EntityState, WorldPos, Vec2, Direction8, Role } from '@shared/types';
 
+interface CharacterBodyParts {
+  body: Graphics;
+  legs: Graphics[];
+  head: Graphics;
+  tail?: Graphics;
+}
+
 // Shiba Inu colors
 const DOG_COLORS = {
   body: 0xe07850,       // Coral/orange
@@ -35,12 +42,7 @@ export class Character {
 
   container: Container;
   private sprite: Container;
-  private bodyParts: {
-    body: Graphics;
-    legs: Graphics[];
-    head: Graphics;
-    tail?: Graphics;
-  };
+  private bodyParts: CharacterBodyParts;
   private nameTag: Text;
 
   private walkAnimTime = 0;
@@ -64,7 +66,7 @@ export class Character {
     this.updateVisualPosition();
   }
 
-  private createSprite(): { sprite: Container; parts: typeof this.bodyParts } {
+  private createSprite(): { sprite: Container; parts: CharacterBodyParts } {
     const sprite = new Container();
 
     if (this.role === 'dog') {
@@ -74,7 +76,7 @@ export class Character {
     }
   }
 
-  private createDogSprite(sprite: Container): { sprite: Container; parts: typeof this.bodyParts } {
+  private createDogSprite(sprite: Container): { sprite: Container; parts: CharacterBodyParts } {
     // Shadow
     const shadow = new Graphics();
     shadow.ellipse(0, 2, 18, 8);
@@ -226,7 +228,7 @@ export class Character {
     g.fill({ color: DOG_COLORS.white });
   }
 
-  private createPandaSprite(sprite: Container): { sprite: Container; parts: typeof this.bodyParts } {
+  private createPandaSprite(sprite: Container): { sprite: Container; parts: CharacterBodyParts } {
     // Shadow
     const shadow = new Graphics();
     shadow.ellipse(0, 2, 20, 10);
