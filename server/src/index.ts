@@ -455,3 +455,4 @@ httpServer.listen(PORT, HOST, () => {
   console.log(`Panda & Dog server running on ${HOST}:${PORT}`);
   console.log(`Health check: http://${HOST}:${PORT}/health`);
 });
+// Build timestamp: Sun Jan 18 15:53:43 CET 2026
