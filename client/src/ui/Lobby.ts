@@ -7,6 +7,8 @@ import QRCode from 'qrcode';
 import { networkClient, type NetworkEvent } from '@net/NetworkClient';
 import type { Role } from '@shared/types';
 
+const VERSION = '2.1.0';
+
 export type LobbyState = 'initial' | 'connecting' | 'creating' | 'waiting' | 'ready' | 'starting';
 
 interface LobbyCallbacks {
@@ -164,6 +166,7 @@ export class LobbyUI {
       <div class="lobby__header">
         <h1 class="lobby__title">Panda & Dog</h1>
         <p class="lobby__subtitle">A cooperative puzzle adventure</p>
+        <span class="lobby__version">v${VERSION}</span>
       </div>
 
       <div class="lobby__actions">
@@ -349,7 +352,7 @@ export class LobbyUI {
     try {
       await networkClient.connect();
       this.setState('creating');
-      networkClient.createRoom('facility_courtyard');
+      networkClient.createRoom('vertical_slice');
     } catch (error) {
       this.callbacks.onError('Failed to connect to server');
       this.setState('initial');

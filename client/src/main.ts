@@ -115,8 +115,10 @@ async function startGame(container: HTMLElement): Promise<void> {
       scene.getInput().setTouchProvider(touchControls);
     }
 
-    // Set higher zoom for mobile (Panda has limited visibility and needs Dog's guidance)
-    if (isMobile) {
+    // Set higher zoom for Panda (limited visibility - needs Dog's guidance)
+    // Also applies on mobile for better touch control experience
+    const localRole = scene.getLocalRole();
+    if (localRole === 'panda' || isMobile) {
       scene.setMobileZoom(2.5);
     }
 

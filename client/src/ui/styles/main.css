@@ -1081,6 +1081,18 @@ body {
   color: var(--color-text-muted);
 }
 
+.lobby__version {
+  display: inline-block;
+  margin-top: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-mono);
+  color: var(--color-text-muted);
+}
+
 .lobby__actions {
   display: flex;
   flex-direction: column;
