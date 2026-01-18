@@ -323,7 +323,7 @@ export class NetworkClient {
   // Room Actions
   // ============================================
 
-  createRoom(levelId: string = 'facility_courtyard'): void {
+  createRoom(levelId: string = 'vertical_slice'): void {
     this.send({
       type: 'create_room',
       timestamp: Date.now(),
