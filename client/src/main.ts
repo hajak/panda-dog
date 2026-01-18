@@ -94,19 +94,27 @@ async function startGame(container: HTMLElement): Promise<void> {
     // Hide loading
     hideLoading(container);
 
+    // Detect mobile
+    const isMobile = isMobileDevice();
+
     // Create simple HUD for multiplayer
-    const hud = createMultiplayerHUD(scene.getLocalRole());
+    const hud = createMultiplayerHUD(scene.getLocalRole(), isMobile);
     container.appendChild(hud);
 
-    // Create puzzle HUD
-    const puzzleHud = createPuzzleHUD(container);
+    // Create puzzle HUD (only on desktop - mobile doesn't need it cluttering the screen)
+    const puzzleHud = isMobile ? null : createPuzzleHUD(container);
 
     // Create touch controls for mobile (Panda player)
-    const touchControls = isMobileDevice() ? createTouchControls(container) : null;
+    const touchControls = isMobile ? createTouchControls(container) : null;
 
     // Connect touch controls to the input system
     if (touchControls) {
       scene.getInput().setTouchProvider(touchControls);
+    }
+
+    // Set higher zoom for mobile (Panda needs to see more detail close up)
+    if (isMobile) {
+      scene.setMobileZoom(1.5);
     }
 
     // Create debug overlay (dev only, toggle with ` or F3)
@@ -118,6 +126,14 @@ async function startGame(container: HTMLElement): Promise<void> {
     // Create help screen
     const helpScreen = createHelpScreen(container, scene.getLocalRole());
 
+    // Connect mobile help button to help screen
+    if (isMobile) {
+      const helpBtn = document.getElementById('help-button-mobile');
+      if (helpBtn) {
+        helpBtn.addEventListener('click', () => helpScreen.toggle());
+      }
+    }
+
     // Listen for level complete event
     networkClient.on('level_complete', (event) => {
       const data = event.data as { puzzlesCompleted: number; totalPuzzles: number; timeElapsed: number };
@@ -126,7 +142,9 @@ async function startGame(container: HTMLElement): Promise<void> {
 
     // Update puzzle HUD and debug overlay periodically
     const updateInterval = setInterval(() => {
-      puzzleHud.update(scene.getPuzzleStates());
+      if (puzzleHud) {
+        puzzleHud.update(scene.getPuzzleStates());
+      }
       if (debugOverlay) {
         debugOverlay.update(scene);
       }
@@ -158,21 +176,35 @@ async function startGame(container: HTMLElement): Promise<void> {
   }
 }
 
-function createMultiplayerHUD(role: string | null): HTMLElement {
+function createMultiplayerHUD(role: string | null, isMobile: boolean): HTMLElement {
   const hud = document.createElement('div');
   hud.className = 'hud';
-  hud.innerHTML = `
-    <div class="hud__stats">
-      <div class="player-role-badge ${role || 'unknown'}">
-        <span class="player-role-badge__icon">${role === 'dog' ? '🐕' : role === 'panda' ? '🐼' : '?'}</span>
-        <span class="player-role-badge__label">${role ? role.toUpperCase() : 'Unknown'}</span>
+
+  // On mobile, show a simple help button instead of keyboard hint
+  // Also hide the role badge on mobile (takes up valuable space)
+  if (isMobile) {
+    hud.innerHTML = `
+      <div class="hud__stats hud__stats--mobile">
+        <button class="help-button-mobile" id="help-button-mobile">?</button>
       </div>
-      <div class="help-hint-badge">Press <kbd>H</kbd> for help</div>
-    </div>
-    <div class="hud__prompts">
-      <div id="interaction-prompt" class="interaction-prompt"></div>
-    </div>
-  `;
+      <div class="hud__prompts">
+        <div id="interaction-prompt" class="interaction-prompt"></div>
+      </div>
+    `;
+  } else {
+    hud.innerHTML = `
+      <div class="hud__stats">
+        <div class="player-role-badge ${role || 'unknown'}">
+          <span class="player-role-badge__icon">${role === 'dog' ? '🐕' : role === 'panda' ? '🐼' : '?'}</span>
+          <span class="player-role-badge__label">${role ? role.toUpperCase() : 'Unknown'}</span>
+        </div>
+        <div class="help-hint-badge">Press <kbd>H</kbd> for help</div>
+      </div>
+      <div class="hud__prompts">
+        <div id="interaction-prompt" class="interaction-prompt"></div>
+      </div>
+    `;
+  }
   return hud;
 }
 

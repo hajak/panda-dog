@@ -548,4 +548,8 @@ export class MultiplayerScene {
   getInput(): Input {
     return this.input;
   }
+
+  setMobileZoom(zoom: number): void {
+    this.camera.setZoom(zoom);
+  }
 }

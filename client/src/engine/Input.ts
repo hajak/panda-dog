@@ -53,7 +53,7 @@ const POSITIVE_KEYS = new Set([
 ]);
 
 export interface TouchInputProvider {
-  getState(): { moveX: number; moveY: number; interact: boolean; run: boolean };
+  getState(): { moveX: number; moveY: number; interact: boolean; interactPressed: boolean; run: boolean };
   isActive(): boolean;
 }
 
@@ -201,7 +201,7 @@ export class Input {
   /**
    * Apply touch input on top of keyboard input
    */
-  applyTouchInput(touch: { moveX: number; moveY: number; interact: boolean; run: boolean }): void {
+  applyTouchInput(touch: { moveX: number; moveY: number; interact: boolean; interactPressed: boolean; run: boolean }): void {
     if (touch.moveX !== 0) {
       this.state.moveX = touch.moveX;
     }
@@ -210,6 +210,8 @@ export class Input {
     }
     if (touch.interact) {
       this.state.interact = true;
+    }
+    if (touch.interactPressed) {
       this.state.interactPressed = true;
     }
     if (touch.run) {

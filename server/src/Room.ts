@@ -65,6 +65,7 @@ export class Room {
 
     // Creator is always Dog
     this.players.set(creatorId, 'dog');
+    this.createPlayerEntity(creatorId, 'dog');
   }
 
   // ============================================

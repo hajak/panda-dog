@@ -7,6 +7,7 @@ export interface TouchControlsState {
   moveX: number;
   moveY: number;
   interact: boolean;
+  interactPressed: boolean;
   run: boolean;
 }
 
@@ -21,8 +22,10 @@ export function createTouchControls(container: HTMLElement): TouchControls {
     moveX: 0,
     moveY: 0,
     interact: false,
+    interactPressed: false,
     run: false,
   };
+  let interactWasPressed = false;
 
   let joystickActive = false;
   let joystickOrigin = { x: 0, y: 0 };
@@ -127,12 +130,17 @@ export function createTouchControls(container: HTMLElement): TouchControls {
   function handleInteractStart(e: TouchEvent | MouseEvent): void {
     e.preventDefault();
     state.interact = true;
+    if (!interactWasPressed) {
+      state.interactPressed = true;
+      interactWasPressed = true;
+    }
     interactBtn.classList.add('touch-button--pressed');
   }
 
   function handleInteractEnd(e: TouchEvent | MouseEvent): void {
     e.preventDefault();
     state.interact = false;
+    interactWasPressed = false;
     interactBtn.classList.remove('touch-button--pressed');
   }
 
@@ -168,7 +176,10 @@ export function createTouchControls(container: HTMLElement): TouchControls {
   }
 
   function getState(): TouchControlsState {
-    return { ...state };
+    const currentState = { ...state };
+    // Reset interactPressed after reading (single frame trigger)
+    state.interactPressed = false;
+    return currentState;
   }
 
   function destroy(): void {

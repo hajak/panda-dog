@@ -19,8 +19,60 @@ export function createHelpScreen(container: HTMLElement, role: Role | null): Hel
 
   const isDog = role === 'dog';
   const isPanda = role === 'panda';
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-  overlay.innerHTML = `
+  // Mobile-friendly help content for Panda
+  const mobileContent = `
+    <div class="help-screen__content">
+      <div class="help-screen__header">
+        <h2 class="help-screen__title">🐼 Panda Controls</h2>
+        <button class="help-screen__close" id="help-close">&times;</button>
+      </div>
+      <div class="help-screen__body">
+        <div class="help-section">
+          <h3 class="help-section__title">Touch Controls</h3>
+          <div class="help-controls">
+            <div class="help-control">
+              <span class="help-key">⭕ Joystick</span>
+              <span class="help-label">Move (left side)</span>
+            </div>
+            <div class="help-control">
+              <span class="help-key">E Button</span>
+              <span class="help-label">Interact</span>
+            </div>
+            <div class="help-control">
+              <span class="help-key">⚡ Button</span>
+              <span class="help-label">Run faster</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="help-section">
+          <h3 class="help-section__title">Your Role: PANDA</h3>
+          <p class="help-description">
+            You are the muscle! Push crates onto pressure plates, operate winches to lower bridges,
+            and use your weight to activate heavy switches.
+          </p>
+        </div>
+
+        <div class="help-section">
+          <h3 class="help-section__title">Tips</h3>
+          <ul class="help-tips">
+            <li>Look for ping markers from your partner</li>
+            <li>Push crates to solve puzzles</li>
+            <li>Stand on pressure plates</li>
+            <li>Watch for hazards!</li>
+          </ul>
+        </div>
+      </div>
+      <div class="help-screen__footer">
+        <span class="help-hint">Tap outside to close</span>
+      </div>
+    </div>
+  `;
+
+  // Desktop help content
+  const desktopContent = `
     <div class="help-screen__content">
       <div class="help-screen__header">
         <h2 class="help-screen__title">Controls</h2>
@@ -105,6 +157,8 @@ export function createHelpScreen(container: HTMLElement, role: Role | null): Hel
       </div>
     </div>
   `;
+
+  overlay.innerHTML = isMobile ? mobileContent : desktopContent;
   container.appendChild(overlay);
 
   const closeBtn = overlay.querySelector('#help-close') as HTMLButtonElement;
