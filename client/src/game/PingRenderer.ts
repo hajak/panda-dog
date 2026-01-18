@@ -121,6 +121,17 @@ export class PingRenderer {
     this.container.zIndex = getDepthValue(this.position) + 1000; // Above other entities
   }
 
+  getMarker(): PingMarker {
+    return {
+      id: this.id,
+      position: { ...this.position },
+      type: this.type,
+      createdBy: this.createdBy,
+      createdAt: this.createdAt,
+      expiresAt: this.expiresAt,
+    };
+  }
+
   destroy(): void {
     this.container.destroy({ children: true });
   }

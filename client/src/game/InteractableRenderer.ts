@@ -427,6 +427,16 @@ export class InteractableRenderer {
     }
   }
 
+  getState(): InteractableState {
+    return {
+      id: this.id,
+      type: this.type,
+      position: { ...this.position },
+      state: { ...this.state },
+      linkedIds: [],
+    };
+  }
+
   destroy(): void {
     this.container.destroy({ children: true });
   }

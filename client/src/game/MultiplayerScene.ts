@@ -559,4 +559,18 @@ export class MultiplayerScene {
   setMobileZoom(zoom: number): void {
     this.camera.setZoom(zoom);
   }
+
+  getCharacterPositions(): { dog?: { x: number; y: number }; panda?: { x: number; y: number } } {
+    const result: { dog?: { x: number; y: number }; panda?: { x: number; y: number } } = {};
+
+    for (const char of this.characters.values()) {
+      if (char.role === 'dog') {
+        result.dog = { x: char.position.x, y: char.position.y };
+      } else if (char.role === 'panda') {
+        result.panda = { x: char.position.x, y: char.position.y };
+      }
+    }
+
+    return result;
+  }
 }

@@ -8,7 +8,10 @@ import { createTouchControls, isMobileDevice } from './ui/TouchControls';
 import { createDebugOverlay } from './ui/DebugOverlay';
 import { createLevelCompleteModal } from './ui/LevelCompleteModal';
 import { createHelpScreen } from './ui/HelpScreen';
+import { DebugUI } from './ui/DebugUI';
 import { networkClient } from './net/NetworkClient';
+
+const VERSION = '2.1.0';
 
 let lobby: LobbyUI | null = null;
 let errorToast: HTMLElement | null = null;
@@ -120,6 +123,9 @@ async function startGame(container: HTMLElement): Promise<void> {
     // Create debug overlay (dev only, toggle with ` or F3)
     const debugOverlay = import.meta.env.DEV ? createDebugOverlay(container) : null;
 
+    // Create debug UI (toggle with §)
+    const debugUI = new DebugUI();
+
     // Create level complete modal
     const levelCompleteModal = createLevelCompleteModal(container);
 
@@ -134,19 +140,56 @@ async function startGame(container: HTMLElement): Promise<void> {
       }
     }
 
+    // Debug UI toggle with § key
+    window.addEventListener('keydown', (e) => {
+      if (e.key === '§' || e.key === '`' || e.code === 'Backquote') {
+        debugUI.toggle();
+      }
+    });
+
     // Listen for level complete event
     networkClient.on('level_complete', (event) => {
       const data = event.data as { puzzlesCompleted: number; totalPuzzles: number; timeElapsed: number };
       levelCompleteModal.show(data);
     });
 
+    // Load level data for debug UI
+    const { getLevel } = await import('@shared/levels');
+    const levelData = getLevel('vertical_slice');
+
+    // Track FPS
+    let fps = 60;
+    let lastFpsUpdate = performance.now();
+    let frameCount = 0;
+
     // Update puzzle HUD and debug overlay periodically
     const updateInterval = setInterval(() => {
+      // Calculate FPS
+      frameCount++;
+      const now = performance.now();
+      if (now - lastFpsUpdate >= 1000) {
+        fps = Math.round(frameCount * 1000 / (now - lastFpsUpdate));
+        frameCount = 0;
+        lastFpsUpdate = now;
+      }
+
       if (puzzleHud) {
         puzzleHud.update(scene.getPuzzleStates());
       }
       if (debugOverlay) {
         debugOverlay.update(scene);
+      }
+      if (debugUI.isVisible()) {
+        const positions = scene.getCharacterPositions();
+        debugUI.update({
+          scene,
+          fps,
+          tiles: levelData?.tiles,
+          worldWidth: levelData?.width || 30,
+          worldHeight: levelData?.height || 20,
+          dogPosition: positions.dog,
+          pandaPosition: positions.panda,
+        });
       }
     }, 100);
 
@@ -180,6 +223,9 @@ function createMultiplayerHUD(role: string | null, isMobile: boolean): HTMLEleme
   const hud = document.createElement('div');
   hud.className = 'hud';
 
+  // Version display in top-right corner
+  const versionBadge = `<div class="version-badge">v${VERSION}</div>`;
+
   // On mobile, show a simple help button instead of keyboard hint
   // Also hide the role badge on mobile (takes up valuable space)
   if (isMobile) {
@@ -187,6 +233,7 @@ function createMultiplayerHUD(role: string | null, isMobile: boolean): HTMLEleme
       <div class="hud__stats hud__stats--mobile">
         <button class="help-button-mobile" id="help-button-mobile">?</button>
       </div>
+      ${versionBadge}
       <div class="hud__prompts">
         <div id="interaction-prompt" class="interaction-prompt"></div>
       </div>
@@ -198,8 +245,9 @@ function createMultiplayerHUD(role: string | null, isMobile: boolean): HTMLEleme
           <span class="player-role-badge__icon">${role === 'dog' ? '🐕' : role === 'panda' ? '🐼' : '?'}</span>
           <span class="player-role-badge__label">${role ? role.toUpperCase() : 'Unknown'}</span>
         </div>
-        <div class="help-hint-badge">Press <kbd>H</kbd> for help</div>
+        <div class="help-hint-badge">Press <kbd>H</kbd> for help | <kbd>§</kbd> debug</div>
       </div>
+      ${versionBadge}
       <div class="hud__prompts">
         <div id="interaction-prompt" class="interaction-prompt"></div>
       </div>
