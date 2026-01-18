@@ -329,35 +329,55 @@ export class Room {
     for (const entity of this.entities.values()) {
       if (entity.velocity.x === 0 && entity.velocity.y === 0) continue;
 
-      // Calculate new position
+      if (!this.levelData) {
+        // No level data, just move freely
+        entity.position.x += entity.velocity.x * deltaTime;
+        entity.position.y += entity.velocity.y * deltaTime;
+        continue;
+      }
+
+      // Calculate new positions
       const newX = entity.position.x + entity.velocity.x * deltaTime;
       const newY = entity.position.y + entity.velocity.y * deltaTime;
 
-      // Basic bounds checking
-      if (this.levelData) {
-        const clampedX = Math.max(0.5, Math.min(this.levelData.width - 0.5, newX));
-        const clampedY = Math.max(0.5, Math.min(this.levelData.height - 0.5, newY));
+      // Clamp to level bounds (with 0.5 margin from edges)
+      const clampedX = Math.max(1.5, Math.min(this.levelData.width - 1.5, newX));
+      const clampedY = Math.max(1.5, Math.min(this.levelData.height - 1.5, newY));
 
-        // Check if target tile is walkable
-        const tileX = Math.floor(clampedX);
-        const tileY = Math.floor(clampedY);
+      // Try to move in both X and Y
+      const canMoveX = this.isTileWalkable(clampedX, entity.position.y);
+      const canMoveY = this.isTileWalkable(entity.position.x, clampedY);
+      const canMoveBoth = this.isTileWalkable(clampedX, clampedY);
 
-        if (tileY >= 0 && tileY < this.levelData.tiles.length) {
-          const row = this.levelData.tiles[tileY];
-          if (row && tileX >= 0 && tileX < row.length) {
-            const tile = row[tileX];
-            if (tile.walkable) {
-              entity.position.x = clampedX;
-              entity.position.y = clampedY;
-            }
-          }
-        }
-      } else {
-        // No level data, just move freely
-        entity.position.x = newX;
-        entity.position.y = newY;
+      // Wall sliding: try moving in both directions, then individually
+      if (canMoveBoth) {
+        entity.position.x = clampedX;
+        entity.position.y = clampedY;
+      } else if (canMoveX && entity.velocity.x !== 0) {
+        // Can only move in X
+        entity.position.x = clampedX;
+      } else if (canMoveY && entity.velocity.y !== 0) {
+        // Can only move in Y
+        entity.position.y = clampedY;
       }
+      // If neither works, entity stays in place (blocked)
     }
+  }
+
+  private isTileWalkable(x: number, y: number): boolean {
+    if (!this.levelData) return true;
+
+    const tileX = Math.floor(x);
+    const tileY = Math.floor(y);
+
+    // Out of bounds is not walkable
+    if (tileY < 0 || tileY >= this.levelData.tiles.length) return false;
+
+    const row = this.levelData.tiles[tileY];
+    if (!row || tileX < 0 || tileX >= row.length) return false;
+
+    const tile = row[tileX];
+    return tile.walkable === true;
   }
 
   private updatePressurePlates(): void {

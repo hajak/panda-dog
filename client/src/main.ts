@@ -112,9 +112,9 @@ async function startGame(container: HTMLElement): Promise<void> {
       scene.getInput().setTouchProvider(touchControls);
     }
 
-    // Set higher zoom for mobile (Panda needs to see more detail close up)
+    // Set higher zoom for mobile (Panda has limited visibility and needs Dog's guidance)
     if (isMobile) {
-      scene.setMobileZoom(1.5);
+      scene.setMobileZoom(2.5);
     }
 
     // Create debug overlay (dev only, toggle with ` or F3)

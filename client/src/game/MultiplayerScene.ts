@@ -368,6 +368,13 @@ export class MultiplayerScene {
       return;
     }
 
+    // Dog cannot interact with objects - only Panda can
+    if (this.localRole === 'dog') {
+      this.nearbyInteractable = null;
+      this.updateInteractionPrompt();
+      return;
+    }
+
     let nearest: { id: string; prompt: string; distance: number } | null = null;
 
     for (const [id, renderer] of this.interactables) {
