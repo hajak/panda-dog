@@ -304,6 +304,9 @@ export class Room {
 
     this.tick_++;
 
+    // Update entity positions based on velocity
+    this.updateEntities();
+
     // Update pressure plates
     this.updatePressurePlates();
 
@@ -318,6 +321,43 @@ export class Room {
 
     // Expire old pings
     this.expirePings();
+  }
+
+  private updateEntities(): void {
+    const deltaTime = 1 / PROTOCOL.SERVER_TICK_RATE;
+
+    for (const entity of this.entities.values()) {
+      if (entity.velocity.x === 0 && entity.velocity.y === 0) continue;
+
+      // Calculate new position
+      const newX = entity.position.x + entity.velocity.x * deltaTime;
+      const newY = entity.position.y + entity.velocity.y * deltaTime;
+
+      // Basic bounds checking
+      if (this.levelData) {
+        const clampedX = Math.max(0.5, Math.min(this.levelData.width - 0.5, newX));
+        const clampedY = Math.max(0.5, Math.min(this.levelData.height - 0.5, newY));
+
+        // Check if target tile is walkable
+        const tileX = Math.floor(clampedX);
+        const tileY = Math.floor(clampedY);
+
+        if (tileY >= 0 && tileY < this.levelData.tiles.length) {
+          const row = this.levelData.tiles[tileY];
+          if (row && tileX >= 0 && tileX < row.length) {
+            const tile = row[tileX];
+            if (tile.walkable) {
+              entity.position.x = clampedX;
+              entity.position.y = clampedY;
+            }
+          }
+        }
+      } else {
+        // No level data, just move freely
+        entity.position.x = newX;
+        entity.position.y = newY;
+      }
+    }
   }
 
   private updatePressurePlates(): void {
@@ -631,9 +671,8 @@ export class Room {
       entity.state = 'idle';
     }
 
-    // Use client position with server validation
-    // TODO: Add proper validation and anti-cheat
-    entity.position = position;
+    // Server is authoritative - position is calculated from velocity in updateEntities()
+    // Client position is ignored to prevent cheating
   }
 
   private getDirection(x: number, y: number): EntityState['facing'] {
