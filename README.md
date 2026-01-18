@@ -32,6 +32,7 @@ Open **http://localhost:5173** in your browser.
 | 1-3 | Quick inventory slots |
 | Escape | Pause |
 | H | Help / Controls |
+| M | Toggle music |
 | § | Debug mode (2D view) |
 | V | Toggle vision cones |
 | G | Toggle grid |
@@ -158,4 +159,4 @@ The UI uses a token-based design system defined in `src/ui/styles/tokens.css`:
 - **Spacing**: 4px base unit scale (0.25rem increments)
 - **Animations**: Fast (100ms), normal (200ms), slow (300ms)
 
-Current version: **2.0.1**
+Current version: **2.1.1**

@@ -27,6 +27,11 @@ export class Archer extends Enemy {
   private attackCooldown: number = 0;
   private characterSprite: ReturnType<typeof createCharacterShape>;
 
+  // Walk animation
+  private walkAnimTime: number = 0;
+  private walkBobSpeed: number = 8;
+  private walkBobHeight: number = 1.2;
+
   // Event callback for spawning projectiles
   onSpawnProjectile: ((event: ProjectileSpawnEvent) => void) | null = null;
 
@@ -129,12 +134,54 @@ export class Archer extends Enemy {
 
   updateVisual(): void {
     let alpha = 1;
+    let scaleX = 1;
+    let scaleY = 1;
+    let bobOffset = 0;
+    let rotation = 0;
 
-    // Flash when attacking
+    // Check if moving
+    const isMoving = Math.abs(this.velocity.x) > 0.1 || Math.abs(this.velocity.y) > 0.1;
+    const isChasing = this.aiState === 'chase' || this.aiState === 'alert';
+
+    if (isMoving) {
+      // Walking animation
+      const speedMult = isChasing ? 1.3 : 1;
+      this.walkAnimTime += 0.016 * this.walkBobSpeed * speedMult;
+
+      // Bobbing
+      bobOffset = Math.sin(this.walkAnimTime) * this.walkBobHeight * speedMult;
+
+      // Squash and stretch
+      const squash = Math.sin(this.walkAnimTime * 2) * 0.03;
+      scaleY = 1 - squash;
+      scaleX = 1 + squash * 0.3;
+
+      // Slight sway
+      rotation = Math.sin(this.walkAnimTime) * 0.04 * speedMult;
+    } else {
+      this.walkAnimTime = 0;
+    }
+
+    // Flash when attacking (draw animation)
     if (this.attackCooldown > ARCHER_ATTACK_COOLDOWN - 300) {
       alpha = 0.7 + Math.sin(Date.now() * 0.02) * 0.3;
+      // Pull-back pose when firing
+      scaleX = 0.95;
+      scaleY = 1.05;
+    }
+
+    // Alert stance when in chase but not moving
+    if (isChasing && !isMoving) {
+      scaleX = 1.03;
+      scaleY = 1.03;
+      // Subtle breathing
+      const breathe = Math.sin(Date.now() * 0.004) * 0.02;
+      scaleY += breathe;
     }
 
     this.characterSprite.alpha = alpha;
+    this.characterSprite.scale.set(scaleX, scaleY);
+    this.characterSprite.rotation = rotation;
+    this.characterSprite.y = bobOffset;
   }
 }

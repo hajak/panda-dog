@@ -11,7 +11,9 @@ export type InteractableType =
   | 'pickup_shuriken'
   | 'pickup_health'
   | 'pickup_key'
-  | 'climbable';
+  | 'climbable'
+  | 'stairs_down'
+  | 'stairs_up';
 
 export interface InteractableConfig {
   id: string;
@@ -42,7 +44,8 @@ export type InteractionEffect =
   | { type: 'unlock'; targetId: string }
   | { type: 'heal'; amount: number }
   | { type: 'climb'; target: WorldPos }
-  | { type: 'message'; text: string };
+  | { type: 'message'; text: string }
+  | { type: 'level_transition'; targetLevel: string; targetSpawn: { x: number; y: number } };
 
 export class InteractableManager {
   private interactables: Map<string, Interactable> = new Map();
@@ -70,6 +73,13 @@ export class InteractableManager {
    */
   unregister(id: string): void {
     this.interactables.delete(id);
+  }
+
+  /**
+   * Clear all interactables
+   */
+  clear(): void {
+    this.interactables.clear();
   }
 
   /**
@@ -214,6 +224,16 @@ export class InteractableManager {
         return { success: true, effects };
       }
 
+      case 'stairs_down':
+      case 'stairs_up': {
+        const targetLevel = interactable.properties.targetLevel as string | undefined;
+        const targetSpawn = interactable.properties.targetSpawn as { x: number; y: number } | undefined;
+        if (targetLevel && targetSpawn) {
+          effects.push({ type: 'level_transition', targetLevel, targetSpawn });
+        }
+        return { success: true, effects };
+      }
+
       default:
         return { success: false, message: 'Cannot interact', effects: [] };
     }
@@ -228,6 +248,8 @@ export class InteractableManager {
       pickup_health: 'Pick up',
       pickup_key: 'Pick up',
       climbable: 'Climb',
+      stairs_down: 'Descend',
+      stairs_up: 'Ascend',
     };
     return prompts[type] ?? 'Interact';
   }

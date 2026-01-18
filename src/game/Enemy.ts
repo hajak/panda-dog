@@ -395,9 +395,11 @@ export abstract class Enemy extends Entity {
   onHit(damage: number, knockback: Vec2): void {
     this.health -= damage;
 
-    // Apply knockback
-    this.position.x += knockback.x * 0.1;
-    this.position.y += knockback.y * 0.1;
+    // Store knockback for collision-checked application
+    this.pendingKnockback = {
+      x: knockback.x * 0.1,
+      y: knockback.y * 0.1,
+    };
 
     // Become alert
     this.alertLevel = 100;
@@ -406,6 +408,37 @@ export abstract class Enemy extends Entity {
     if (this.health <= 0) {
       this.onDeath();
     }
+  }
+
+  // Pending knockback to be applied with collision checking
+  pendingKnockback: Vec2 | null = null;
+
+  /**
+   * Apply pending knockback with collision validation
+   * Called by GameScene after collision system is available
+   */
+  applyKnockback(canMoveTo: (from: { x: number; y: number; z: number }, toX: number, toY: number) => boolean): void {
+    if (!this.pendingKnockback) return;
+
+    const newX = this.position.x + this.pendingKnockback.x;
+    const newY = this.position.y + this.pendingKnockback.y;
+
+    // Only apply knockback if the destination is valid
+    if (canMoveTo(this.position, newX, newY)) {
+      this.position.x = newX;
+      this.position.y = newY;
+    } else {
+      // Try partial knockback (half distance)
+      const halfX = this.position.x + this.pendingKnockback.x * 0.5;
+      const halfY = this.position.y + this.pendingKnockback.y * 0.5;
+      if (canMoveTo(this.position, halfX, halfY)) {
+        this.position.x = halfX;
+        this.position.y = halfY;
+      }
+      // If still invalid, don't apply any knockback
+    }
+
+    this.pendingKnockback = null;
   }
 
   update(deltaTime: number): void {

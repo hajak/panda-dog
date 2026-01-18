@@ -7,6 +7,14 @@ import type { Player } from '../game/Player';
 import type { Enemy } from '../game/Enemy';
 import type { TileData, InputState } from '../engine/types';
 
+export interface DebugInteractable {
+  id: string;
+  type: string;
+  x: number;
+  y: number;
+  state: string;
+}
+
 export interface DebugUIData {
   fps: number;
   frameTime: number;
@@ -21,6 +29,8 @@ export interface DebugUIData {
   tiles: TileData[][];
   worldWidth: number;
   worldHeight: number;
+  interactables?: DebugInteractable[];
+  currentLevel?: string;
 }
 
 const CELL_SIZE = 32;
@@ -78,7 +88,7 @@ export class DebugUI {
   update(data: DebugUIData): void {
     if (!this.visible) return;
 
-    const { player, enemies, currentTile, nearbyInteractable, inputState, fps, paused, tiles, worldWidth, worldHeight } = data;
+    const { player, enemies, currentTile, nearbyInteractable, inputState, fps, paused, tiles, worldWidth, worldHeight, interactables, currentLevel } = data;
 
     // Resize canvas if needed
     const canvasWidth = Math.min(worldWidth * CELL_SIZE, 700);
@@ -150,6 +160,50 @@ export class DebugUI {
       }
     }
 
+    // Draw interactables (doors, pickups)
+    if (interactables) {
+      for (const item of interactables) {
+        const ix = item.x * CELL_SIZE;
+        const iy = item.y * CELL_SIZE;
+
+        if (item.type === 'door') {
+          // Draw door as a prominent rectangle
+          const isOpen = item.state === 'active';
+          ctx.fillStyle = isOpen ? '#4caf50' : '#ff9800';
+          ctx.fillRect(ix - 14, iy - 20, 28, 40);
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(ix - 14, iy - 20, 28, 40);
+          ctx.lineWidth = 1;
+
+          // Door label
+          ctx.fillStyle = '#000';
+          ctx.font = 'bold 10px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(isOpen ? 'OPEN' : 'DOOR', ix, iy + 4);
+
+          // Arrow indicator for exit
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 14px monospace';
+          ctx.fillText('🚪', ix, iy - 6);
+        } else if (item.type.startsWith('pickup_')) {
+          // Draw pickup as a small circle
+          ctx.fillStyle = item.type === 'pickup_health' ? '#ff4444' : '#44aaff';
+          ctx.beginPath();
+          ctx.arc(ix, iy, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#fff';
+          ctx.stroke();
+
+          // Pickup label
+          ctx.fillStyle = '#fff';
+          ctx.font = '8px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText(item.type === 'pickup_health' ? '♥' : '★', ix, iy + 3);
+        }
+      }
+    }
+
     // Draw enemies
     for (const enemy of enemies) {
       if (!enemy.active) continue;
@@ -164,11 +218,27 @@ export class DebugUI {
                       '#aa0000';
       ctx.fillRect(ex - 10, ey - 10, 20, 20);
 
-      // Enemy state label
+      // Enemy state and health label
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 10px monospace';
       ctx.textAlign = 'center';
       ctx.fillText(enemy.aiState.toUpperCase().slice(0, 4), ex, ey - 14);
+
+      // Health bar above enemy
+      const healthPct = enemy.health / enemy.maxHealth;
+      const barWidth = 30;
+      const barHeight = 4;
+      ctx.fillStyle = '#333';
+      ctx.fillRect(ex - barWidth / 2, ey - 24, barWidth, barHeight);
+      ctx.fillStyle = healthPct > 0.5 ? '#4caf50' : healthPct > 0.25 ? '#ff9800' : '#f44336';
+      ctx.fillRect(ex - barWidth / 2, ey - 24, barWidth * healthPct, barHeight);
+      ctx.strokeStyle = '#fff';
+      ctx.strokeRect(ex - barWidth / 2, ey - 24, barWidth, barHeight);
+
+      // Health number
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 8px monospace';
+      ctx.fillText(`${Math.ceil(enemy.health)}`, ex, ey - 28);
 
       // Vision direction
       ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
@@ -275,6 +345,9 @@ export class DebugUI {
         <div class="dbg-title">ENEMIES</div>
         <div>Total: ${enemies.filter(e => e.active).length}</div>
         <div>Alert: <b class="${alertCount > 0 ? 'red' : ''}">${alertCount}</b></div>
+        ${enemies.filter(e => e.active).slice(0, 3).map(e =>
+          `<div class="dim">• ${e.aiState}: ${Math.ceil(e.health)}/${e.maxHealth} HP</div>`
+        ).join('')}
       </div>
 
       <div class="dbg-section">
@@ -284,10 +357,11 @@ export class DebugUI {
 
       <div class="dbg-section">
         <div>FPS: <b class="${fps < 30 ? 'red' : 'green'}">${fps}</b></div>
+        <div>Level: <b class="yellow">${currentLevel?.toUpperCase() || '?'}</b></div>
         ${paused ? '<div class="big red">PAUSED</div>' : ''}
       </div>
 
-      <div class="dbg-hint">§ = normal view</div>
+      <div class="dbg-hint">§ = normal view | 🚪 = door</div>
     `;
   }
 

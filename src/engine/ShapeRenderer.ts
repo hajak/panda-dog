@@ -7,7 +7,7 @@ import { Graphics, Container, Text, TextStyle } from 'pixi.js';
 import { TILE_WIDTH, TILE_HEIGHT, TILE_DEPTH, COLORS, LIGHT_DIRECTION } from './constants';
 
 /**
- * Create an isometric tile shape
+ * Create an isometric tile shape - Low-poly style with clean faces
  */
 export function createIsoTile(
   color: number,
@@ -20,14 +20,15 @@ export function createIsoTile(
   const hh = TILE_HEIGHT / 2;
   const depth = elevation * TILE_DEPTH;
 
-  // Calculate shaded colors
+  // Low-poly color palette with sharper contrast
   const topColor = color;
-  const leftColor = shadeColor(color, -0.3);
-  const rightColor = shadeColor(color, -0.15);
+  const leftColor = shadeColor(color, -0.4);
+  const rightColor = shadeColor(color, -0.2);
+  const edgeColor = shadeColor(color, -0.5);
 
   // Draw sides if elevated
   if (depth > 0) {
-    // Left side
+    // Left side - clean flat face
     g.poly([
       { x: -hw, y: 0 },
       { x: 0, y: hh },
@@ -36,7 +37,7 @@ export function createIsoTile(
     ]);
     g.fill(leftColor);
 
-    // Right side
+    // Right side - clean flat face
     g.poly([
       { x: hw, y: 0 },
       { x: 0, y: hh },
@@ -44,9 +45,15 @@ export function createIsoTile(
       { x: hw, y: depth },
     ]);
     g.fill(rightColor);
+
+    // Edge highlight for depth
+    g.moveTo(-hw, 0);
+    g.lineTo(0, hh);
+    g.lineTo(hw, 0);
+    g.stroke({ color: edgeColor, width: 1, alpha: 0.5 });
   }
 
-  // Top surface
+  // Top surface - clean diamond
   g.poly([
     { x: 0, y: -hh },
     { x: hw, y: 0 },
@@ -55,24 +62,33 @@ export function createIsoTile(
   ]);
   g.fill(topColor);
 
-  // Add pattern details
+  // Add subtle edge definition for low-poly look
+  g.poly([
+    { x: 0, y: -hh },
+    { x: hw, y: 0 },
+    { x: 0, y: hh },
+    { x: -hw, y: 0 },
+  ]);
+  g.stroke({ color: edgeColor, width: 0.5, alpha: 0.3 });
+
+  // Add pattern details (simplified for low-poly)
   if (pattern === 'grass') {
     if (isHidingSpot) {
-      addTallGrassPattern(g, hw, hh);
+      addTallGrassPatternLowPoly(g, hw, hh);
     } else {
-      addGrassPattern(g, hw, hh);
+      addGrassPatternLowPoly(g, hw, hh);
     }
   } else if (pattern === 'stone') {
-    addStonePattern(g, hw, hh);
+    addStonePatternLowPoly(g, hw, hh);
   } else if (pattern === 'water') {
-    addWaterPattern(g, hw, hh);
+    addWaterPatternLowPoly(g, hw, hh);
   }
 
   return g;
 }
 
 /**
- * Create an isometric wall/block
+ * Create an isometric wall/block - Low-poly style with edge highlights
  */
 export function createIsoBlock(
   color: number,
@@ -86,10 +102,11 @@ export function createIsoBlock(
   const blockHeight = height * TILE_DEPTH;
 
   const topColor = color;
-  const leftColor = shadeColor(color, -0.35);
+  const leftColor = shadeColor(color, -0.4);
   const rightColor = shadeColor(color, -0.2);
+  const edgeColor = shadeColor(color, -0.5);
 
-  // Left face
+  // Left face - clean flat surface
   g.poly([
     { x: -hw, y: 0 },
     { x: -hw, y: -blockHeight },
@@ -98,7 +115,7 @@ export function createIsoBlock(
   ]);
   g.fill(leftColor);
 
-  // Right face
+  // Right face - clean flat surface
   g.poly([
     { x: hw, y: 0 },
     { x: hw, y: -blockHeight },
@@ -107,7 +124,7 @@ export function createIsoBlock(
   ]);
   g.fill(rightColor);
 
-  // Top face
+  // Top face - clean flat surface
   g.poly([
     { x: 0, y: -hh - blockHeight },
     { x: hw, y: -blockHeight },
@@ -116,11 +133,25 @@ export function createIsoBlock(
   ]);
   g.fill(topColor);
 
+  // Edge highlights for low-poly definition
+  // Top edges
+  g.moveTo(0, -hh - blockHeight);
+  g.lineTo(hw, -blockHeight);
+  g.lineTo(0, hh - blockHeight);
+  g.lineTo(-hw, -blockHeight);
+  g.closePath();
+  g.stroke({ color: edgeColor, width: 0.5, alpha: 0.4 });
+
+  // Vertical edge highlight
+  g.moveTo(0, hh - blockHeight);
+  g.lineTo(0, hh);
+  g.stroke({ color: edgeColor, width: 0.5, alpha: 0.3 });
+
   return g;
 }
 
 /**
- * Create a character shape (ninja/guard/archer)
+ * Create a character shape (ninja/guard/archer) - Low-poly voxel style
  */
 export function createCharacterShape(
   color: number,
@@ -128,103 +159,360 @@ export function createCharacterShape(
   type: 'ninja' | 'guard' | 'archer' = 'ninja'
 ): Container {
   const container = new Container();
-  const g = new Graphics();
 
-  const baseSize = 12 * size;
-  const height = 24 * size;
+  const baseSize = 14 * size;
+  const height = 28 * size;
 
-  // Shadow
+  // Shadow - hexagonal for low-poly feel
   const shadow = new Graphics();
-  shadow.ellipse(0, 4, baseSize * 0.8, baseSize * 0.4);
-  shadow.fill({ color: 0x000000, alpha: 0.3 });
+  shadow.poly([
+    { x: -baseSize * 0.6, y: 3 },
+    { x: 0, y: 6 },
+    { x: baseSize * 0.6, y: 3 },
+    { x: baseSize * 0.6, y: -1 },
+    { x: 0, y: -4 },
+    { x: -baseSize * 0.6, y: -1 },
+  ]);
+  shadow.fill({ color: 0x000000, alpha: 0.35 });
   container.addChild(shadow);
 
-  // Body shape varies by type
+  // Low-poly voxel body
   if (type === 'ninja') {
-    // Sleek, agile shape
-    g.roundRect(-baseSize * 0.4, -height, baseSize * 0.8, height * 0.6, 4);
-    g.fill(shadeColor(color, -0.2));
-
-    // Head
-    g.circle(0, -height + 4, baseSize * 0.35);
-    g.fill(color);
-
-    // Headband accent
-    g.rect(-baseSize * 0.4, -height + 2, baseSize * 0.8, 3);
-    g.fill(0xff4444);
+    drawLowPolyNinja(container, color, baseSize, height);
   } else if (type === 'guard') {
-    // Bulky armored shape
-    g.roundRect(-baseSize * 0.5, -height * 0.9, baseSize, height * 0.7, 2);
-    g.fill(shadeColor(color, -0.2));
-
-    // Helmet
-    g.roundRect(-baseSize * 0.4, -height, baseSize * 0.8, height * 0.25, 2);
-    g.fill(color);
-
-    // Visor slit
-    g.rect(-baseSize * 0.3, -height + 6, baseSize * 0.6, 2);
-    g.fill(0x111111);
+    drawLowPolyGuard(container, color, baseSize, height);
   } else if (type === 'archer') {
-    // Medium build with bow indication
-    g.roundRect(-baseSize * 0.35, -height * 0.85, baseSize * 0.7, height * 0.6, 3);
-    g.fill(shadeColor(color, -0.2));
-
-    // Hood
-    g.moveTo(0, -height);
-    g.lineTo(baseSize * 0.4, -height * 0.7);
-    g.lineTo(-baseSize * 0.4, -height * 0.7);
-    g.closePath();
-    g.fill(color);
-
-    // Quiver indication
-    g.rect(baseSize * 0.3, -height * 0.8, 4, height * 0.4);
-    g.fill(0x8b4513);
+    drawLowPolyArcher(container, color, baseSize, height);
   }
 
-  container.addChild(g);
   return container;
 }
 
+function drawLowPolyNinja(container: Container, color: number, baseSize: number, height: number): void {
+  const g = new Graphics();
+  const topColor = color;
+  const leftColor = shadeColor(color, -0.35);
+  const rightColor = shadeColor(color, -0.2);
+
+  // === LEGS (two blocky columns) ===
+  const legWidth = baseSize * 0.25;
+  const legHeight = height * 0.35;
+  const legGap = baseSize * 0.15;
+
+  // Left leg - front face
+  g.rect(-legGap - legWidth, -legHeight, legWidth, legHeight);
+  g.fill(leftColor);
+  // Left leg - top
+  g.rect(-legGap - legWidth, -legHeight - 2, legWidth, 2);
+  g.fill(topColor);
+
+  // Right leg - front face
+  g.rect(legGap, -legHeight, legWidth, legHeight);
+  g.fill(rightColor);
+  // Right leg - top
+  g.rect(legGap, -legHeight - 2, legWidth, 2);
+  g.fill(topColor);
+
+  // === TORSO (isometric cube) ===
+  const torsoWidth = baseSize * 0.7;
+  const torsoHeight = height * 0.35;
+  const torsoBottom = -legHeight;
+  const torsoTop = torsoBottom - torsoHeight;
+
+  // Torso - left face
+  g.poly([
+    { x: -torsoWidth / 2, y: torsoBottom },
+    { x: -torsoWidth / 2, y: torsoTop },
+    { x: 0, y: torsoTop - 4 },
+    { x: 0, y: torsoBottom - 4 },
+  ]);
+  g.fill(leftColor);
+
+  // Torso - right face
+  g.poly([
+    { x: torsoWidth / 2, y: torsoBottom },
+    { x: torsoWidth / 2, y: torsoTop },
+    { x: 0, y: torsoTop - 4 },
+    { x: 0, y: torsoBottom - 4 },
+  ]);
+  g.fill(rightColor);
+
+  // Torso - top face
+  g.poly([
+    { x: 0, y: torsoTop - 8 },
+    { x: torsoWidth / 2, y: torsoTop },
+    { x: 0, y: torsoTop + 4 },
+    { x: -torsoWidth / 2, y: torsoTop },
+  ]);
+  g.fill(topColor);
+
+  // === HEAD (blocky cube) ===
+  const headSize = baseSize * 0.5;
+  const headBottom = torsoTop - 2;
+  const headTop = headBottom - headSize;
+
+  // Head - left face
+  g.poly([
+    { x: -headSize / 2, y: headBottom },
+    { x: -headSize / 2, y: headTop },
+    { x: 0, y: headTop - 3 },
+    { x: 0, y: headBottom - 3 },
+  ]);
+  g.fill(shadeColor(0x4a4a4a, -0.2));
+
+  // Head - right face
+  g.poly([
+    { x: headSize / 2, y: headBottom },
+    { x: headSize / 2, y: headTop },
+    { x: 0, y: headTop - 3 },
+    { x: 0, y: headBottom - 3 },
+  ]);
+  g.fill(shadeColor(0x4a4a4a, 0.1));
+
+  // Head - top
+  g.poly([
+    { x: 0, y: headTop - 6 },
+    { x: headSize / 2, y: headTop },
+    { x: 0, y: headTop + 3 },
+    { x: -headSize / 2, y: headTop },
+  ]);
+  g.fill(0x4a4a4a);
+
+  // Ninja mask eye slit
+  g.rect(-headSize * 0.35, headTop + headSize * 0.3, headSize * 0.7, 3);
+  g.fill(0x111111);
+
+  // Headband (red accent)
+  g.rect(-headSize * 0.45, headTop + 2, headSize * 0.9, 4);
+  g.fill(0xe53935);
+
+  container.addChild(g);
+}
+
+function drawLowPolyGuard(container: Container, color: number, baseSize: number, height: number): void {
+  const g = new Graphics();
+  const topColor = color;
+  const leftColor = shadeColor(color, -0.35);
+  const rightColor = shadeColor(color, -0.2);
+
+  // Wider, bulkier proportions
+  const bodyWidth = baseSize * 0.9;
+  const bodyHeight = height * 0.55;
+
+  // === BODY (large isometric block) ===
+  // Body - left face
+  g.poly([
+    { x: -bodyWidth / 2, y: 0 },
+    { x: -bodyWidth / 2, y: -bodyHeight },
+    { x: 0, y: -bodyHeight - 6 },
+    { x: 0, y: -6 },
+  ]);
+  g.fill(leftColor);
+
+  // Body - right face
+  g.poly([
+    { x: bodyWidth / 2, y: 0 },
+    { x: bodyWidth / 2, y: -bodyHeight },
+    { x: 0, y: -bodyHeight - 6 },
+    { x: 0, y: -6 },
+  ]);
+  g.fill(rightColor);
+
+  // Body - top
+  g.poly([
+    { x: 0, y: -bodyHeight - 12 },
+    { x: bodyWidth / 2, y: -bodyHeight },
+    { x: 0, y: -bodyHeight + 6 },
+    { x: -bodyWidth / 2, y: -bodyHeight },
+  ]);
+  g.fill(topColor);
+
+  // Armor plate details
+  g.rect(-bodyWidth * 0.35, -bodyHeight * 0.6, bodyWidth * 0.7, 4);
+  g.fill(shadeColor(color, 0.2));
+
+  // === HELMET (angular) ===
+  const helmetSize = baseSize * 0.55;
+  const helmetBottom = -bodyHeight;
+  const helmetTop = helmetBottom - helmetSize * 0.8;
+
+  // Helmet - left
+  g.poly([
+    { x: -helmetSize / 2, y: helmetBottom },
+    { x: -helmetSize / 2, y: helmetTop },
+    { x: 0, y: helmetTop - 4 },
+    { x: 0, y: helmetBottom - 4 },
+  ]);
+  g.fill(shadeColor(0x795548, -0.3));
+
+  // Helmet - right
+  g.poly([
+    { x: helmetSize / 2, y: helmetBottom },
+    { x: helmetSize / 2, y: helmetTop },
+    { x: 0, y: helmetTop - 4 },
+    { x: 0, y: helmetBottom - 4 },
+  ]);
+  g.fill(shadeColor(0x795548, 0.1));
+
+  // Helmet - top (dome)
+  g.poly([
+    { x: 0, y: helmetTop - 8 },
+    { x: helmetSize / 2, y: helmetTop },
+    { x: 0, y: helmetTop + 4 },
+    { x: -helmetSize / 2, y: helmetTop },
+  ]);
+  g.fill(0x795548);
+
+  // Visor slit
+  g.rect(-helmetSize * 0.3, helmetTop + helmetSize * 0.35, helmetSize * 0.6, 3);
+  g.fill(0x111111);
+
+  container.addChild(g);
+}
+
+function drawLowPolyArcher(container: Container, color: number, baseSize: number, height: number): void {
+  const g = new Graphics();
+  const topColor = color;
+  const leftColor = shadeColor(color, -0.35);
+  const rightColor = shadeColor(color, -0.2);
+
+  const bodyWidth = baseSize * 0.65;
+  const bodyHeight = height * 0.5;
+
+  // === BODY ===
+  // Body - left face
+  g.poly([
+    { x: -bodyWidth / 2, y: 0 },
+    { x: -bodyWidth / 2, y: -bodyHeight },
+    { x: 0, y: -bodyHeight - 5 },
+    { x: 0, y: -5 },
+  ]);
+  g.fill(leftColor);
+
+  // Body - right face
+  g.poly([
+    { x: bodyWidth / 2, y: 0 },
+    { x: bodyWidth / 2, y: -bodyHeight },
+    { x: 0, y: -bodyHeight - 5 },
+    { x: 0, y: -5 },
+  ]);
+  g.fill(rightColor);
+
+  // Body - top
+  g.poly([
+    { x: 0, y: -bodyHeight - 10 },
+    { x: bodyWidth / 2, y: -bodyHeight },
+    { x: 0, y: -bodyHeight + 5 },
+    { x: -bodyWidth / 2, y: -bodyHeight },
+  ]);
+  g.fill(topColor);
+
+  // === HOOD (angular pyramid) ===
+  const hoodBase = -bodyHeight;
+  const hoodTop = hoodBase - baseSize * 0.5;
+
+  // Hood - front triangular face
+  g.moveTo(0, hoodTop - 4);
+  g.lineTo(baseSize * 0.35, hoodBase);
+  g.lineTo(-baseSize * 0.35, hoodBase);
+  g.closePath();
+  g.fill(shadeColor(color, 0.1));
+
+  // Hood shadow under
+  g.rect(-baseSize * 0.25, hoodBase + 2, baseSize * 0.5, 4);
+  g.fill(0x222222);
+
+  // === QUIVER (blocky) ===
+  const quiverColor = 0x6d4c41;
+  g.rect(bodyWidth * 0.4, -bodyHeight * 0.8, 5, bodyHeight * 0.6);
+  g.fill(quiverColor);
+  // Arrow tips
+  g.poly([
+    { x: bodyWidth * 0.4, y: -bodyHeight * 0.85 },
+    { x: bodyWidth * 0.4 + 2.5, y: -bodyHeight * 0.95 },
+    { x: bodyWidth * 0.4 + 5, y: -bodyHeight * 0.85 },
+  ]);
+  g.fill(0x888888);
+
+  container.addChild(g);
+}
+
 /**
- * Create a projectile shape (shuriken)
+ * Create a projectile shape (shuriken) - Low-poly style
  */
 export function createProjectileShape(type: 'shuriken' | 'arrow' = 'shuriken'): Graphics {
   const g = new Graphics();
 
   if (type === 'shuriken') {
-    // 4-pointed star
-    const points = 4;
-    const outerRadius = 8;
+    // Clean 4-pointed star with flat surfaces
+    const outerRadius = 9;
     const innerRadius = 3;
 
-    g.moveTo(outerRadius, 0);
-    for (let i = 0; i < points * 2; i++) {
-      const angle = (i * Math.PI) / points - Math.PI / 2;
-      const radius = i % 2 === 0 ? outerRadius : innerRadius;
-      g.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
-    }
-    g.closePath();
-    g.fill(0xcccccc);
-    g.stroke({ color: 0x888888, width: 1 });
-  } else {
-    // Arrow
-    g.moveTo(12, 0);
-    g.lineTo(-8, 0);
-    g.stroke({ color: 0x8b4513, width: 2 });
+    // Main star shape
+    g.poly([
+      { x: 0, y: -outerRadius },
+      { x: innerRadius, y: -innerRadius },
+      { x: outerRadius, y: 0 },
+      { x: innerRadius, y: innerRadius },
+      { x: 0, y: outerRadius },
+      { x: -innerRadius, y: innerRadius },
+      { x: -outerRadius, y: 0 },
+      { x: -innerRadius, y: -innerRadius },
+    ]);
+    g.fill(0xb0bec5);
 
-    // Arrowhead
-    g.moveTo(12, 0);
-    g.lineTo(6, -3);
-    g.lineTo(6, 3);
-    g.closePath();
-    g.fill(0x888888);
+    // Highlight facet
+    g.poly([
+      { x: 0, y: -outerRadius },
+      { x: innerRadius, y: -innerRadius },
+      { x: 0, y: 0 },
+      { x: -innerRadius, y: -innerRadius },
+    ]);
+    g.fill(0xcfd8dc);
+
+    // Center
+    g.poly([
+      { x: -2, y: -2 },
+      { x: 2, y: -2 },
+      { x: 2, y: 2 },
+      { x: -2, y: 2 },
+    ]);
+    g.fill(0x455a64);
+  } else {
+    // Low-poly arrow
+    // Shaft
+    g.rect(-8, -1, 16, 2);
+    g.fill(0x8d6e63);
+
+    // Arrowhead (angular)
+    g.poly([
+      { x: 12, y: 0 },
+      { x: 6, y: -4 },
+      { x: 7, y: 0 },
+      { x: 6, y: 4 },
+    ]);
+    g.fill(0x78909c);
+
+    // Fletching
+    g.poly([
+      { x: -8, y: 0 },
+      { x: -10, y: -3 },
+      { x: -6, y: 0 },
+    ]);
+    g.fill(0xef5350);
+    g.poly([
+      { x: -8, y: 0 },
+      { x: -10, y: 3 },
+      { x: -6, y: 0 },
+    ]);
+    g.fill(0xc62828);
   }
 
   return g;
 }
 
 /**
- * Create a prop shape (tree, bush, crate, etc.)
+ * Create a prop shape (tree, bush, crate, etc.) - Low-poly voxel style
  */
 export function createPropShape(
   type: 'tree' | 'bush' | 'crate' | 'barrel' | 'lantern' | 'rock'
@@ -232,264 +520,688 @@ export function createPropShape(
   const container = new Container();
 
   if (type === 'tree') {
-    // Trunk
+    // Low-poly tree with blocky trunk and angular foliage
     const trunk = new Graphics();
-    trunk.rect(-4, -40, 8, 40);
-    trunk.fill(0x5d4037);
+    const trunkColor = 0x6d4c41;
+
+    // Isometric blocky trunk
+    // Left face
+    trunk.poly([
+      { x: -5, y: 0 },
+      { x: -5, y: -35 },
+      { x: 0, y: -38 },
+      { x: 0, y: -3 },
+    ]);
+    trunk.fill(shadeColor(trunkColor, -0.3));
+
+    // Right face
+    trunk.poly([
+      { x: 5, y: 0 },
+      { x: 5, y: -35 },
+      { x: 0, y: -38 },
+      { x: 0, y: -3 },
+    ]);
+    trunk.fill(shadeColor(trunkColor, -0.1));
+
     container.addChild(trunk);
 
-    // Foliage layers
-    for (let i = 0; i < 3; i++) {
+    // Angular foliage pyramids (stacked)
+    const foliageColors = [0x2e7d32, 0x388e3c, 0x43a047];
+    const layers = [
+      { y: -42, size: 24, height: 18 },
+      { y: -55, size: 18, height: 14 },
+      { y: -65, size: 12, height: 10 },
+    ];
+
+    for (let i = 0; i < layers.length; i++) {
+      const { y, size, height } = layers[i];
       const foliage = new Graphics();
-      const y = -45 - i * 12;
-      const radius = 20 - i * 4;
-      foliage.ellipse(0, y, radius, radius * 0.7);
-      foliage.fill(shadeColor(0x2e7d32, -i * 0.1));
+      const color = foliageColors[i];
+
+      // Front face (diamond shape pointing down)
+      foliage.poly([
+        { x: 0, y: y - height },
+        { x: size / 2, y: y },
+        { x: 0, y: y + size / 4 },
+        { x: -size / 2, y: y },
+      ]);
+      foliage.fill(color);
+
+      // Left dark face
+      foliage.poly([
+        { x: 0, y: y - height },
+        { x: -size / 2, y: y },
+        { x: 0, y: y + size / 4 },
+      ]);
+      foliage.fill(shadeColor(color, -0.25));
+
       container.addChild(foliage);
     }
   } else if (type === 'bush') {
+    // Low-poly bush - angular cluster
     const bush = new Graphics();
-    bush.ellipse(0, -8, 16, 12);
-    bush.fill(0x388e3c);
-    bush.ellipse(-6, -6, 10, 8);
-    bush.fill(0x43a047);
-    bush.ellipse(6, -6, 10, 8);
-    bush.fill(0x2e7d32);
+    const baseColor = 0x43a047;
+
+    // Main angular shape (hexagonal)
+    bush.poly([
+      { x: 0, y: -16 },
+      { x: 12, y: -10 },
+      { x: 14, y: -2 },
+      { x: 8, y: 4 },
+      { x: -8, y: 4 },
+      { x: -14, y: -2 },
+      { x: -12, y: -10 },
+    ]);
+    bush.fill(baseColor);
+
+    // Dark left facet
+    bush.poly([
+      { x: 0, y: -16 },
+      { x: -12, y: -10 },
+      { x: -14, y: -2 },
+      { x: -8, y: 4 },
+      { x: 0, y: 0 },
+    ]);
+    bush.fill(shadeColor(baseColor, -0.3));
+
+    // Light top facet
+    bush.poly([
+      { x: 0, y: -16 },
+      { x: 12, y: -10 },
+      { x: 0, y: -6 },
+      { x: -12, y: -10 },
+    ]);
+    bush.fill(shadeColor(baseColor, 0.15));
+
     container.addChild(bush);
   } else if (type === 'crate') {
-    const crate = createIsoBlock(0x8d6e63, 1, 0.8, 0.8);
-    // Add wooden plank lines
-    crate.moveTo(-12, -8);
-    crate.lineTo(12, -8);
-    crate.stroke({ color: 0x5d4037, width: 1 });
-    container.addChild(crate);
-  } else if (type === 'barrel') {
-    const barrel = new Graphics();
-    // Body
-    barrel.ellipse(0, -12, 10, 6);
-    barrel.fill(0x6d4c41);
-    barrel.rect(-10, -12, 20, 20);
-    barrel.fill(0x8d6e63);
-    barrel.ellipse(0, 8, 10, 6);
-    barrel.fill(0x5d4037);
-    // Bands
-    barrel.rect(-11, -8, 22, 2);
-    barrel.fill(0x424242);
-    barrel.rect(-11, 2, 22, 2);
-    barrel.fill(0x424242);
-    container.addChild(barrel);
-  } else if (type === 'lantern') {
-    const lantern = new Graphics();
-    // Post
-    lantern.rect(-2, -30, 4, 30);
-    lantern.fill(0x37474f);
-    // Lantern body
-    lantern.roundRect(-6, -42, 12, 14, 2);
-    lantern.fill(0x263238);
-    // Light glow
-    lantern.circle(0, -35, 4);
-    lantern.fill({ color: 0xffeb3b, alpha: 0.8 });
-    container.addChild(lantern);
-  } else if (type === 'rock') {
-    const rock = new Graphics();
-    rock.poly([
-      { x: -12, y: 4 },
-      { x: -8, y: -8 },
-      { x: 4, y: -10 },
-      { x: 14, y: -2 },
-      { x: 10, y: 6 },
-      { x: -4, y: 8 },
+    // Low-poly isometric crate
+    const g = new Graphics();
+    const crateColor = 0xa1887f;
+    const size = 14;
+
+    // Left face
+    g.poly([
+      { x: -size, y: 0 },
+      { x: -size, y: -size * 1.2 },
+      { x: 0, y: -size * 1.2 - 6 },
+      { x: 0, y: -6 },
     ]);
-    rock.fill(0x616161);
-    rock.poly([
-      { x: -8, y: -8 },
-      { x: 4, y: -10 },
+    g.fill(shadeColor(crateColor, -0.35));
+
+    // Right face
+    g.poly([
+      { x: size, y: 0 },
+      { x: size, y: -size * 1.2 },
+      { x: 0, y: -size * 1.2 - 6 },
+      { x: 0, y: -6 },
+    ]);
+    g.fill(shadeColor(crateColor, -0.15));
+
+    // Top face
+    g.poly([
+      { x: 0, y: -size * 1.2 - 12 },
+      { x: size, y: -size * 1.2 },
+      { x: 0, y: -size * 1.2 + 6 },
+      { x: -size, y: -size * 1.2 },
+    ]);
+    g.fill(crateColor);
+
+    // Cross detail on top
+    g.moveTo(-size * 0.5, -size * 1.2 - 3);
+    g.lineTo(size * 0.5, -size * 1.2 - 3);
+    g.stroke({ color: shadeColor(crateColor, -0.3), width: 2 });
+
+    container.addChild(g);
+  } else if (type === 'barrel') {
+    // Low-poly octagonal barrel
+    const g = new Graphics();
+    const barrelColor = 0x8d6e63;
+
+    // Body (simplified octagon sides)
+    const radius = 10;
+    const height = 22;
+
+    // Front-left face
+    g.poly([
+      { x: -radius, y: 0 },
+      { x: -radius, y: -height },
+      { x: -radius * 0.5, y: -height - 3 },
+      { x: -radius * 0.5, y: -3 },
+    ]);
+    g.fill(shadeColor(barrelColor, -0.35));
+
+    // Front face
+    g.poly([
+      { x: -radius * 0.5, y: -3 },
+      { x: -radius * 0.5, y: -height - 3 },
+      { x: radius * 0.5, y: -height - 3 },
+      { x: radius * 0.5, y: -3 },
+    ]);
+    g.fill(shadeColor(barrelColor, -0.2));
+
+    // Front-right face
+    g.poly([
+      { x: radius * 0.5, y: -3 },
+      { x: radius * 0.5, y: -height - 3 },
+      { x: radius, y: -height },
+      { x: radius, y: 0 },
+    ]);
+    g.fill(shadeColor(barrelColor, -0.1));
+
+    // Top (octagonal)
+    g.poly([
+      { x: 0, y: -height - 8 },
+      { x: radius * 0.5, y: -height - 5 },
+      { x: radius, y: -height },
+      { x: radius * 0.5, y: -height + 3 },
+      { x: -radius * 0.5, y: -height + 3 },
+      { x: -radius, y: -height },
+      { x: -radius * 0.5, y: -height - 5 },
+    ]);
+    g.fill(barrelColor);
+
+    // Metal bands
+    g.rect(-radius - 1, -height * 0.3, radius * 2 + 2, 3);
+    g.fill(0x546e7a);
+    g.rect(-radius - 1, -height * 0.7, radius * 2 + 2, 3);
+    g.fill(0x546e7a);
+
+    container.addChild(g);
+  } else if (type === 'lantern') {
+    // Low-poly angular lantern
+    const g = new Graphics();
+
+    // Post (blocky)
+    g.poly([
+      { x: -2, y: 0 },
+      { x: -2, y: -28 },
+      { x: 0, y: -30 },
+      { x: 0, y: -2 },
+    ]);
+    g.fill(0x455a64);
+
+    g.poly([
+      { x: 2, y: 0 },
+      { x: 2, y: -28 },
+      { x: 0, y: -30 },
+      { x: 0, y: -2 },
+    ]);
+    g.fill(0x607d8b);
+
+    // Lantern body (hexagonal)
+    const ly = -38;
+    g.poly([
+      { x: 0, y: ly - 8 },
+      { x: 6, y: ly - 4 },
+      { x: 6, y: ly + 6 },
+      { x: 0, y: ly + 10 },
+      { x: -6, y: ly + 6 },
+      { x: -6, y: ly - 4 },
+    ]);
+    g.fill(0x37474f);
+
+    // Light glow (diamond)
+    g.poly([
+      { x: 0, y: ly - 4 },
+      { x: 4, y: ly + 1 },
+      { x: 0, y: ly + 6 },
+      { x: -4, y: ly + 1 },
+    ]);
+    g.fill({ color: 0xffeb3b, alpha: 0.9 });
+
+    container.addChild(g);
+  } else if (type === 'rock') {
+    // Low-poly angular rock
+    const g = new Graphics();
+    const rockColor = 0x78909c;
+
+    // Main body - angular facets
+    g.poly([
+      { x: -14, y: 4 },
+      { x: -10, y: -6 },
+      { x: -2, y: -10 },
+      { x: 8, y: -8 },
+      { x: 14, y: -2 },
+      { x: 12, y: 6 },
+      { x: 2, y: 8 },
+      { x: -8, y: 6 },
+    ]);
+    g.fill(rockColor);
+
+    // Top facet (lighter)
+    g.poly([
+      { x: -10, y: -6 },
+      { x: -2, y: -10 },
+      { x: 8, y: -8 },
       { x: 2, y: -4 },
     ]);
-    rock.fill(0x757575);
-    container.addChild(rock);
+    g.fill(shadeColor(rockColor, 0.2));
+
+    // Left facet (darker)
+    g.poly([
+      { x: -14, y: 4 },
+      { x: -10, y: -6 },
+      { x: -4, y: -2 },
+      { x: -8, y: 6 },
+    ]);
+    g.fill(shadeColor(rockColor, -0.25));
+
+    container.addChild(g);
   }
 
-  // Add shadow
+  // Low-poly shadow (hexagonal)
   const shadow = new Graphics();
-  shadow.ellipse(0, 4, 12, 6);
-  shadow.fill({ color: 0x000000, alpha: 0.25 });
+  shadow.poly([
+    { x: -10, y: 3 },
+    { x: 0, y: 6 },
+    { x: 10, y: 3 },
+    { x: 10, y: 1 },
+    { x: 0, y: -2 },
+    { x: -10, y: 1 },
+  ]);
+  shadow.fill({ color: 0x000000, alpha: 0.3 });
   container.addChildAt(shadow, 0);
 
   return container;
 }
 
 /**
- * Create a door/gate shape - isometric upright door
- * In isometric view, the door faces diagonally (SE direction)
+ * Create a door/gate shape - Low-poly isometric wooden door
  */
 export function createDoorShape(isOpen: boolean = false): Container {
   const container = new Container();
   const g = new Graphics();
 
-  const doorHeight = 52;
-  const doorWidth = TILE_WIDTH * 0.6; // Width in isometric space
-  const doorDepth = 6; // Thickness of door
+  const doorWidth = 16;
+  const doorHeight = 40;
+  const doorDepth = 6;
+  const woodColor = 0x6d4c41;
+  const frameColor = 0x4e342e;
+  const metalColor = 0x5d4037;
 
-  // Colors
-  const doorColorFront = 0x8b5a2b; // Brown wood
-  const doorColorSide = shadeColor(doorColorFront, -0.3);
-  const doorColorTop = shadeColor(doorColorFront, 0.1);
-  const frameColor = 0x4a3728;
-  const metalColor = 0x4a4a4a;
-
-  if (isOpen) {
-    // Open door - door swung inward, showing opening
-    // Frame posts (isometric)
-    // Left post
-    g.poly([
-      { x: -doorWidth / 2, y: TILE_HEIGHT / 4 },
-      { x: -doorWidth / 2, y: TILE_HEIGHT / 4 - doorHeight },
-      { x: -doorWidth / 2 + 4, y: TILE_HEIGHT / 4 - 2 - doorHeight },
-      { x: -doorWidth / 2 + 4, y: TILE_HEIGHT / 4 - 2 },
-    ]);
-    g.fill(frameColor);
-
-    // Right post
-    g.poly([
-      { x: doorWidth / 2 - 4, y: -TILE_HEIGHT / 4 - 2 },
-      { x: doorWidth / 2 - 4, y: -TILE_HEIGHT / 4 - 2 - doorHeight },
-      { x: doorWidth / 2, y: -TILE_HEIGHT / 4 - doorHeight },
-      { x: doorWidth / 2, y: -TILE_HEIGHT / 4 },
-    ]);
-    g.fill(frameColor);
-
-    // Open passage floor hint
-    g.poly([
-      { x: -doorWidth / 2 + 6, y: TILE_HEIGHT / 4 - 4 },
-      { x: 0, y: 0 },
-      { x: doorWidth / 2 - 6, y: -TILE_HEIGHT / 4 + 4 },
-      { x: 0, y: -4 },
-    ]);
-    g.fill({ color: 0x5a7a5a, alpha: 0.5 });
-
-  } else {
-    // Closed door - isometric rectangle standing up
-    // Door follows isometric angle (NE-SW orientation)
-
-    // Front face of door (main visible surface)
-    g.poly([
-      { x: -doorWidth / 2, y: TILE_HEIGHT / 4 },           // bottom-left
-      { x: -doorWidth / 2, y: TILE_HEIGHT / 4 - doorHeight }, // top-left
-      { x: doorWidth / 2, y: -TILE_HEIGHT / 4 - doorHeight }, // top-right
-      { x: doorWidth / 2, y: -TILE_HEIGHT / 4 },           // bottom-right
-    ]);
-    g.fill(doorColorFront);
-
-    // Top edge of door (shows thickness)
-    g.poly([
-      { x: -doorWidth / 2, y: TILE_HEIGHT / 4 - doorHeight },
-      { x: -doorWidth / 2 + doorDepth, y: TILE_HEIGHT / 4 - doorHeight - 3 },
-      { x: doorWidth / 2 + doorDepth, y: -TILE_HEIGHT / 4 - doorHeight - 3 },
-      { x: doorWidth / 2, y: -TILE_HEIGHT / 4 - doorHeight },
-    ]);
-    g.fill(doorColorTop);
-
-    // Right edge of door (shows thickness)
-    g.poly([
-      { x: doorWidth / 2, y: -TILE_HEIGHT / 4 - doorHeight },
-      { x: doorWidth / 2 + doorDepth, y: -TILE_HEIGHT / 4 - doorHeight - 3 },
-      { x: doorWidth / 2 + doorDepth, y: -TILE_HEIGHT / 4 - 3 },
-      { x: doorWidth / 2, y: -TILE_HEIGHT / 4 },
-    ]);
-    g.fill(doorColorSide);
-
-    // Wood plank horizontal lines
-    for (let i = 1; i < 5; i++) {
-      const y1 = TILE_HEIGHT / 4 - (doorHeight * i / 5);
-      const y2 = -TILE_HEIGHT / 4 - (doorHeight * i / 5);
-      g.moveTo(-doorWidth / 2 + 3, y1);
-      g.lineTo(doorWidth / 2 - 3, y2);
-      g.stroke({ color: shadeColor(doorColorFront, -0.2), width: 1 });
-    }
-
-    // Metal bands
-    const bandY1a = TILE_HEIGHT / 4 - doorHeight * 0.2;
-    const bandY1b = -TILE_HEIGHT / 4 - doorHeight * 0.2;
-    g.moveTo(-doorWidth / 2, bandY1a);
-    g.lineTo(doorWidth / 2, bandY1b);
-    g.lineTo(doorWidth / 2, bandY1b - 4);
-    g.lineTo(-doorWidth / 2, bandY1a - 4);
-    g.closePath();
-    g.fill(metalColor);
-
-    const bandY2a = TILE_HEIGHT / 4 - doorHeight * 0.8;
-    const bandY2b = -TILE_HEIGHT / 4 - doorHeight * 0.8;
-    g.moveTo(-doorWidth / 2, bandY2a);
-    g.lineTo(doorWidth / 2, bandY2b);
-    g.lineTo(doorWidth / 2, bandY2b - 4);
-    g.lineTo(-doorWidth / 2, bandY2a - 4);
-    g.closePath();
-    g.fill(metalColor);
-
-    // Door handle/ring
-    const handleX = doorWidth / 4;
-    const handleY = -doorHeight / 2;
-    g.circle(handleX, handleY, 4);
-    g.fill(0xc9a227);
-    g.circle(handleX, handleY, 2);
-    g.fill(0x8b7020);
-  }
-
-  // Shadow at base
+  // Shadow
   const shadow = new Graphics();
   shadow.poly([
-    { x: -doorWidth / 2 - 4, y: TILE_HEIGHT / 4 + 4 },
-    { x: doorWidth / 2 - 4, y: -TILE_HEIGHT / 4 + 4 },
-    { x: doorWidth / 2 + 8, y: -TILE_HEIGHT / 4 + 8 },
-    { x: -doorWidth / 2 + 8, y: TILE_HEIGHT / 4 + 8 },
+    { x: -doorWidth * 0.6, y: 2 },
+    { x: 0, y: 5 },
+    { x: doorWidth * 0.6, y: 2 },
+    { x: doorWidth * 0.6, y: 0 },
+    { x: 0, y: -3 },
+    { x: -doorWidth * 0.6, y: 0 },
   ]);
-  shadow.fill({ color: 0x000000, alpha: 0.3 });
-  container.addChildAt(shadow, 0);
+  shadow.fill({ color: 0x000000, alpha: 0.35 });
+  container.addChild(shadow);
+
+  if (isOpen) {
+    // Open door - door swung open to the left (hinged on left side)
+
+    // Door frame (the opening)
+    g.poly([
+      { x: -doorWidth - 2, y: 2 },
+      { x: -doorWidth - 2, y: -doorHeight - 2 },
+      { x: doorWidth + 2, y: -doorHeight - 2 },
+      { x: doorWidth + 2, y: 2 },
+    ]);
+    g.fill(frameColor);
+
+    // Dark interior/passage
+    g.rect(-doorWidth, -doorHeight, doorWidth * 2, doorHeight);
+    g.fill(0x1a1a1a);
+
+    // The open door panel - swung inward and to the left
+    // Door is now at an angle, showing its side
+    const openDoorX = -doorWidth - 12;
+
+    // Door back face (now visible because door is open)
+    g.poly([
+      { x: openDoorX, y: 0 },
+      { x: openDoorX, y: -doorHeight },
+      { x: openDoorX + doorDepth, y: -doorHeight - 3 },
+      { x: openDoorX + doorDepth, y: -3 },
+    ]);
+    g.fill(shadeColor(woodColor, -0.25));
+
+    // Door edge (thickness, now visible)
+    g.poly([
+      { x: openDoorX + doorDepth, y: -3 },
+      { x: openDoorX + doorDepth, y: -doorHeight - 3 },
+      { x: -doorWidth, y: -doorHeight },
+      { x: -doorWidth, y: 0 },
+    ]);
+    g.fill(shadeColor(woodColor, -0.1));
+
+    // Door inside face (the back of the door)
+    g.poly([
+      { x: openDoorX, y: 0 },
+      { x: openDoorX, y: -doorHeight },
+      { x: -doorWidth - 4, y: -doorHeight + 2 },
+      { x: -doorWidth - 4, y: 2 },
+    ]);
+    g.fill(woodColor);
+
+    // Hinge hardware
+    g.rect(-doorWidth - 1, -doorHeight + 6, 3, 4);
+    g.fill(metalColor);
+    g.rect(-doorWidth - 1, -12, 3, 4);
+    g.fill(metalColor);
+
+  } else {
+    // Closed door - solid wooden door with isometric depth
+
+    // Door frame (behind door)
+    g.poly([
+      { x: -doorWidth - 2, y: 2 },
+      { x: -doorWidth - 2, y: -doorHeight - 2 },
+      { x: doorWidth + 2, y: -doorHeight - 2 },
+      { x: doorWidth + 2, y: 2 },
+    ]);
+    g.fill(frameColor);
+
+    // Door left face (depth)
+    g.poly([
+      { x: -doorWidth, y: 0 },
+      { x: -doorWidth, y: -doorHeight },
+      { x: -doorWidth + doorDepth, y: -doorHeight - doorDepth / 2 },
+      { x: -doorWidth + doorDepth, y: -doorDepth / 2 },
+    ]);
+    g.fill(shadeColor(woodColor, -0.3));
+
+    // Door top face (depth)
+    g.poly([
+      { x: -doorWidth, y: -doorHeight },
+      { x: -doorWidth + doorDepth, y: -doorHeight - doorDepth / 2 },
+      { x: doorWidth + doorDepth, y: -doorHeight - doorDepth / 2 },
+      { x: doorWidth, y: -doorHeight },
+    ]);
+    g.fill(shadeColor(woodColor, 0.15));
+
+    // Door front face
+    g.rect(-doorWidth, -doorHeight, doorWidth * 2, doorHeight);
+    g.fill(woodColor);
+
+    // Vertical wood planks
+    for (let i = 1; i < 4; i++) {
+      const x = -doorWidth + (doorWidth * 2 * i) / 4;
+      g.moveTo(x, -doorHeight + 2);
+      g.lineTo(x, -2);
+      g.stroke({ color: shadeColor(woodColor, -0.15), width: 1 });
+    }
+
+    // Horizontal metal bands
+    const bandY1 = -doorHeight + 8;
+    const bandY2 = -10;
+    g.rect(-doorWidth + 2, bandY1, doorWidth * 2 - 4, 4);
+    g.fill(metalColor);
+    g.rect(-doorWidth + 2, bandY2, doorWidth * 2 - 4, 4);
+    g.fill(metalColor);
+
+    // Door handle (right side)
+    g.circle(doorWidth - 6, -doorHeight / 2, 3);
+    g.fill(metalColor);
+    g.stroke({ color: shadeColor(metalColor, 0.3), width: 1 });
+
+    // Metal studs on bands
+    const studPositions = [
+      { x: -doorWidth + 6, y: bandY1 + 2 },
+      { x: doorWidth - 6, y: bandY1 + 2 },
+      { x: -doorWidth + 6, y: bandY2 + 2 },
+      { x: doorWidth - 6, y: bandY2 + 2 },
+    ];
+    for (const stud of studPositions) {
+      g.circle(stud.x, stud.y, 2);
+      g.fill(shadeColor(metalColor, 0.2));
+    }
+  }
 
   container.addChild(g);
   return container;
 }
 
 /**
- * Create a pickup item shape
+ * Create stairs shape - Nethack-inspired dungeon stairs
+ */
+export function createStairsShape(direction: 'down' | 'up'): Container {
+  const container = new Container();
+  const g = new Graphics();
+
+  const stairWidth = 28;
+  const stairHeight = 40;
+  const stepCount = 4;
+  const stepHeight = stairHeight / stepCount;
+
+  const isDown = direction === 'down';
+  const baseColor = isDown ? 0x5d4037 : 0x78909c;
+  const glowColor = isDown ? 0x00bcd4 : 0xffeb3b;
+
+  // Shadow
+  const shadow = new Graphics();
+  shadow.poly([
+    { x: 0, y: 10 },
+    { x: stairWidth + 6, y: 18 },
+    { x: 0, y: 26 },
+    { x: -stairWidth - 6, y: 18 },
+  ]);
+  shadow.fill({ color: 0x000000, alpha: 0.5 });
+  container.addChild(shadow);
+
+  // Glow effect around stairs
+  const glow = new Graphics();
+  glow.poly([
+    { x: 0, y: -stairHeight - 8 },
+    { x: stairWidth + 8, y: -stairHeight / 2 },
+    { x: 0, y: 10 },
+    { x: -stairWidth - 8, y: -stairHeight / 2 },
+  ]);
+  glow.fill({ color: glowColor, alpha: 0.25 });
+  container.addChild(glow);
+
+  // Draw steps (from back to front for proper layering)
+  for (let i = 0; i < stepCount; i++) {
+    const stepY = -stairHeight + (i * stepHeight);
+    const stepDepth = isDown ? i + 1 : stepCount - i;
+    const depthOffset = stepDepth * 4;
+
+    // Step top face
+    g.poly([
+      { x: 0, y: stepY - stepHeight / 2 + depthOffset },
+      { x: stairWidth / 2 - i * 2, y: stepY + depthOffset },
+      { x: 0, y: stepY + stepHeight / 2 + depthOffset },
+      { x: -stairWidth / 2 + i * 2, y: stepY + depthOffset },
+    ]);
+    g.fill(shadeColor(baseColor, 0.1 - i * 0.1));
+
+    // Step front face
+    g.poly([
+      { x: -stairWidth / 2 + i * 2, y: stepY + depthOffset },
+      { x: 0, y: stepY + stepHeight / 2 + depthOffset },
+      { x: 0, y: stepY + stepHeight / 2 + depthOffset + 6 },
+      { x: -stairWidth / 2 + i * 2, y: stepY + depthOffset + 6 },
+    ]);
+    g.fill(shadeColor(baseColor, -0.3));
+
+    // Step right face
+    g.poly([
+      { x: stairWidth / 2 - i * 2, y: stepY + depthOffset },
+      { x: 0, y: stepY + stepHeight / 2 + depthOffset },
+      { x: 0, y: stepY + stepHeight / 2 + depthOffset + 6 },
+      { x: stairWidth / 2 - i * 2, y: stepY + depthOffset + 6 },
+    ]);
+    g.fill(shadeColor(baseColor, -0.15));
+  }
+
+  // Direction indicator (arrow)
+  const arrowY = -stairHeight / 2;
+  if (isDown) {
+    // Down arrow
+    g.poly([
+      { x: 0, y: arrowY + 10 },
+      { x: -8, y: arrowY - 2 },
+      { x: -3, y: arrowY - 2 },
+      { x: -3, y: arrowY - 10 },
+      { x: 3, y: arrowY - 10 },
+      { x: 3, y: arrowY - 2 },
+      { x: 8, y: arrowY - 2 },
+    ]);
+    g.fill(glowColor);
+    g.stroke({ color: 0xffffff, width: 1 });
+  } else {
+    // Up arrow
+    g.poly([
+      { x: 0, y: arrowY - 10 },
+      { x: -8, y: arrowY + 2 },
+      { x: -3, y: arrowY + 2 },
+      { x: -3, y: arrowY + 10 },
+      { x: 3, y: arrowY + 10 },
+      { x: 3, y: arrowY + 2 },
+      { x: 8, y: arrowY + 2 },
+    ]);
+    g.fill(glowColor);
+    g.stroke({ color: 0xffffff, width: 1 });
+  }
+
+  // Border frame
+  g.poly([
+    { x: 0, y: -stairHeight - 4 },
+    { x: stairWidth / 2 + 4, y: -stairHeight / 2 },
+    { x: 0, y: 6 },
+    { x: -stairWidth / 2 - 4, y: -stairHeight / 2 },
+  ]);
+  g.stroke({ color: glowColor, width: 3 });
+
+  container.addChild(g);
+  return container;
+}
+
+/**
+ * Create a pickup item shape - Calm low-poly style (50% smaller for heart/shuriken)
  */
 export function createPickupShape(type: 'shuriken' | 'health' | 'key'): Container {
   const container = new Container();
   const g = new Graphics();
 
-  // Glow effect
-  const glow = new Graphics();
-  glow.circle(0, -8, 16);
-  glow.fill({ color: type === 'health' ? COLORS.HEALTH : COLORS.PRIMARY, alpha: 0.2 });
-  container.addChild(glow);
+  // Small shadow
+  const shadow = new Graphics();
+  shadow.poly([
+    { x: -6, y: 2 },
+    { x: 0, y: 4 },
+    { x: 6, y: 2 },
+    { x: 6, y: 0 },
+    { x: 0, y: -2 },
+    { x: -6, y: 0 },
+  ]);
+  shadow.fill({ color: 0x000000, alpha: 0.3 });
+  container.addChild(shadow);
 
-  if (type === 'shuriken') {
-    const shuriken = createProjectileShape('shuriken');
-    shuriken.y = -10;
-    container.addChild(shuriken);
-  } else if (type === 'health') {
-    // Heart shape
-    g.moveTo(0, -4);
-    g.bezierCurveTo(-8, -14, -14, -6, 0, 4);
-    g.moveTo(0, -4);
-    g.bezierCurveTo(8, -14, 14, -6, 0, 4);
-    g.fill(COLORS.HEALTH);
-    g.y = -8;
-    container.addChild(g);
-  } else if (type === 'key') {
-    // Key shape
-    g.circle(-6, -10, 5);
-    g.fill(0xffd700);
-    g.rect(-4, -10, 14, 3);
-    g.fill(0xffd700);
-    g.rect(6, -10, 2, 6);
-    g.fill(0xffd700);
-    g.rect(2, -10, 2, 4);
-    g.fill(0xffd700);
-    container.addChild(g);
+  const y = -8; // Float slightly above ground
+
+  if (type === 'health') {
+    // Small heart - 50% of original size
+    const heartColor = 0xc62828;
+
+    // Heart shape (smaller)
+    g.poly([
+      { x: 0, y: y + 6 },      // Bottom point
+      { x: -6, y: y - 1 },     // Left bottom
+      { x: -4, y: y - 5 },     // Left top
+      { x: 0, y: y - 2 },      // Center dip
+      { x: 4, y: y - 5 },      // Right top
+      { x: 6, y: y - 1 },      // Right bottom
+    ]);
+    g.fill(heartColor);
+
+    // Highlight on left lobe
+    g.poly([
+      { x: -4, y: y - 5 },
+      { x: -2, y: y - 3 },
+      { x: -5, y: y - 2 },
+    ]);
+    g.fill(shadeColor(heartColor, 0.3));
+
+    // Subtle outline
+    g.poly([
+      { x: 0, y: y + 6 },
+      { x: -6, y: y - 1 },
+      { x: -4, y: y - 5 },
+      { x: 0, y: y - 2 },
+      { x: 4, y: y - 5 },
+      { x: 6, y: y - 1 },
+    ]);
+    g.stroke({ color: shadeColor(heartColor, -0.2), width: 1 });
+
+  } else if (type === 'shuriken') {
+    // Small shuriken - 50% of original size
+    const metalColor = 0x90a4ae;
+    const size = 6;
+    const inner = 2;
+
+    // 4-point star
+    g.poly([
+      { x: 0, y: y - size },
+      { x: inner, y: y - inner },
+      { x: size, y: y },
+      { x: inner, y: y + inner },
+      { x: 0, y: y + size },
+      { x: -inner, y: y + inner },
+      { x: -size, y: y },
+      { x: -inner, y: y - inner },
+    ]);
+    g.fill(metalColor);
+
+    // Top highlight facet
+    g.poly([
+      { x: 0, y: y - size },
+      { x: inner, y: y - inner },
+      { x: 0, y: y },
+      { x: -inner, y: y - inner },
+    ]);
+    g.fill(shadeColor(metalColor, 0.25));
+
+    // Left shadow facet
+    g.poly([
+      { x: -size, y: y },
+      { x: -inner, y: y - inner },
+      { x: 0, y: y },
+      { x: -inner, y: y + inner },
+    ]);
+    g.fill(shadeColor(metalColor, -0.2));
+
+    // Center hole
+    g.circle(0, y, 1.5);
+    g.fill(shadeColor(metalColor, -0.4));
+
+  } else {
+    // Key - keep similar size
+    const keyColor = 0xffc107;
+
+    // Key ring (circle)
+    g.circle(-3, y, 5);
+    g.fill(keyColor);
+    g.circle(-3, y, 2);
+    g.fill(shadeColor(keyColor, -0.3));
+
+    // Key shaft
+    g.rect(1, y - 2, 10, 4);
+    g.fill(keyColor);
+
+    // Key teeth
+    g.rect(8, y + 2, 3, 4);
+    g.fill(keyColor);
+
+    // Highlight
+    g.poly([
+      { x: -5, y: y - 3 },
+      { x: -2, y: y - 4 },
+      { x: -1, y: y - 2 },
+    ]);
+    g.fill(shadeColor(keyColor, 0.3));
+
+    // Outline
+    g.circle(-3, y, 5);
+    g.stroke({ color: shadeColor(keyColor, -0.2), width: 1 });
   }
 
+  container.addChild(g);
   return container;
 }
 
@@ -572,73 +1284,174 @@ function shadeColor(color: number, percent: number): number {
   return (Math.round(r) << 16) | (Math.round(g) << 8) | Math.round(b);
 }
 
-function addGrassPattern(g: Graphics, hw: number, hh: number): void {
-  // Add grass blade details
-  const grassColor = 0x4caf50;
-  for (let i = 0; i < 5; i++) {
-    const x = (Math.random() - 0.5) * hw;
-    const y = (Math.random() - 0.5) * hh * 0.8;
-    g.moveTo(x, y);
-    g.lineTo(x - 1, y - 4);
-    g.lineTo(x + 1, y - 3);
-    g.stroke({ color: grassColor, width: 1, alpha: 0.5 });
+// Low-poly style grass - geometric triangular tufts
+function addGrassPatternLowPoly(g: Graphics, hw: number, hh: number): void {
+  const grassColors = [0x4caf50, 0x66bb6a, 0x43a047];
+
+  // Simple geometric grass tufts at fixed positions
+  const positions = [
+    { x: -hw * 0.3, y: -hh * 0.2 },
+    { x: hw * 0.2, y: hh * 0.1 },
+    { x: 0, y: 0 },
+  ];
+
+  for (const pos of positions) {
+    const color = grassColors[Math.floor(Math.random() * grassColors.length)];
+    // Simple triangle tuft
+    g.moveTo(pos.x, pos.y);
+    g.lineTo(pos.x - 3, pos.y - 6);
+    g.lineTo(pos.x + 3, pos.y - 5);
+    g.closePath();
+    g.fill({ color, alpha: 0.7 });
   }
 }
 
-function addTallGrassPattern(g: Graphics, hw: number, hh: number): void {
-  // Add tall grass for hiding spots - much denser and taller
-  const grassColors = [0x2e7d32, 0x388e3c, 0x43a047, 0x4caf50];
+// Low-poly tall grass for hiding spots - larger geometric shapes
+function addTallGrassPatternLowPoly(g: Graphics, hw: number, hh: number): void {
+  const grassColors = [0x2e7d32, 0x388e3c, 0x43a047];
 
-  // Draw many tall grass blades
-  for (let i = 0; i < 20; i++) {
-    const x = (Math.random() - 0.5) * hw * 1.4;
-    const y = (Math.random() - 0.5) * hh * 1.2;
-    const height = 10 + Math.random() * 14; // Tall grass (10-24 pixels)
-    const color = grassColors[Math.floor(Math.random() * grassColors.length)];
-    const sway = (Math.random() - 0.5) * 4; // Random sway direction
+  // Fixed positions for consistent look
+  const tufts = [
+    { x: -hw * 0.4, y: 0 },
+    { x: -hw * 0.1, y: -hh * 0.3 },
+    { x: hw * 0.2, y: hh * 0.2 },
+    { x: hw * 0.35, y: -hh * 0.1 },
+    { x: 0, y: hh * 0.15 },
+    { x: -hw * 0.25, y: hh * 0.25 },
+  ];
 
-    // Draw grass blade as a thin triangle
-    g.moveTo(x - 1, y);
-    g.lineTo(x + sway, y - height);
-    g.lineTo(x + 1, y);
+  for (let i = 0; i < tufts.length; i++) {
+    const { x, y } = tufts[i];
+    const color = grassColors[i % grassColors.length];
+    const height = 14 + (i % 3) * 4;
+
+    // Blocky triangular blade
+    g.moveTo(x - 2, y);
+    g.lineTo(x, y - height);
+    g.lineTo(x + 2, y);
     g.closePath();
     g.fill({ color, alpha: 0.9 });
-  }
 
-  // Add some grass tufts (clusters)
-  for (let i = 0; i < 6; i++) {
-    const cx = (Math.random() - 0.5) * hw * 0.8;
-    const cy = (Math.random() - 0.5) * hh * 0.6;
-    const color = grassColors[Math.floor(Math.random() * grassColors.length)];
-
-    // Draw a small grass tuft
-    for (let j = 0; j < 3; j++) {
-      const offsetX = (j - 1) * 3;
-      const height = 12 + Math.random() * 8;
-      g.moveTo(cx + offsetX - 1, cy);
-      g.lineTo(cx + offsetX + (Math.random() - 0.5) * 2, cy - height);
-      g.lineTo(cx + offsetX + 1, cy);
-      g.closePath();
-      g.fill({ color, alpha: 0.85 });
-    }
+    // Secondary blade
+    g.moveTo(x + 1, y);
+    g.lineTo(x + 3, y - height * 0.7);
+    g.lineTo(x + 4, y);
+    g.closePath();
+    g.fill({ color: shadeColor(color, -0.15), alpha: 0.85 });
   }
 }
 
-function addStonePattern(g: Graphics, hw: number, hh: number): void {
-  // Add crack details
+// Low-poly stone pattern - geometric facets
+function addStonePatternLowPoly(g: Graphics, hw: number, hh: number): void {
+  // Geometric crack lines
   const crackColor = 0x555555;
-  g.moveTo(-hw * 0.3, -hh * 0.2);
-  g.lineTo(0, hh * 0.1);
-  g.lineTo(hw * 0.2, -hh * 0.1);
-  g.stroke({ color: crackColor, width: 1, alpha: 0.3 });
+
+  // Angular crack pattern
+  g.moveTo(-hw * 0.4, -hh * 0.1);
+  g.lineTo(-hw * 0.1, 0);
+  g.lineTo(hw * 0.2, -hh * 0.15);
+  g.stroke({ color: crackColor, width: 1, alpha: 0.4 });
+
+  // Small facet highlight
+  g.poly([
+    { x: hw * 0.1, y: hh * 0.1 },
+    { x: hw * 0.3, y: 0 },
+    { x: hw * 0.2, y: hh * 0.2 },
+  ]);
+  g.fill({ color: 0xffffff, alpha: 0.1 });
 }
 
-function addWaterPattern(g: Graphics, _hw: number, _hh: number): void {
-  // Add wave highlights
-  const waveColor = 0x64b5f6;
-  g.moveTo(-10, -2);
-  g.bezierCurveTo(-5, -4, 5, 0, 10, -2);
-  g.stroke({ color: waveColor, width: 1, alpha: 0.4 });
+// Low-poly water pattern - geometric ripples
+function addWaterPatternLowPoly(g: Graphics, hw: number, hh: number): void {
+  const rippleColor = 0x90caf9;
+
+  // Angular wave lines
+  g.moveTo(-hw * 0.4, -hh * 0.1);
+  g.lineTo(-hw * 0.1, -hh * 0.2);
+  g.lineTo(hw * 0.2, -hh * 0.1);
+  g.lineTo(hw * 0.4, -hh * 0.15);
+  g.stroke({ color: rippleColor, width: 1, alpha: 0.5 });
+
+  // Second ripple
+  g.moveTo(-hw * 0.3, hh * 0.15);
+  g.lineTo(0, hh * 0.1);
+  g.lineTo(hw * 0.3, hh * 0.2);
+  g.stroke({ color: rippleColor, width: 1, alpha: 0.3 });
+}
+
+/**
+ * Create a lever shape - Wall-mounted switch
+ */
+export function createLeverShape(isOn: boolean = false): Container {
+  const container = new Container();
+  const g = new Graphics();
+
+  const baseColor = 0x5d4037;
+  const metalColor = 0x78909c;
+  const handleColor = isOn ? 0x4caf50 : 0xf44336;
+
+  // Shadow
+  const shadow = new Graphics();
+  shadow.poly([
+    { x: -8, y: 4 },
+    { x: 0, y: 8 },
+    { x: 8, y: 4 },
+    { x: 0, y: 0 },
+  ]);
+  shadow.fill({ color: 0x000000, alpha: 0.4 });
+  container.addChild(shadow);
+
+  // Base plate (stone/metal mounting)
+  g.poly([
+    { x: -12, y: -16 },
+    { x: 12, y: -16 },
+    { x: 12, y: 4 },
+    { x: -12, y: 4 },
+  ]);
+  g.fill(baseColor);
+
+  // Base plate edge (depth)
+  g.poly([
+    { x: -12, y: 4 },
+    { x: 12, y: 4 },
+    { x: 10, y: 8 },
+    { x: -10, y: 8 },
+  ]);
+  g.fill(shadeColor(baseColor, -0.3));
+
+  // Metal pivot mount
+  g.circle(0, -6, 6);
+  g.fill(metalColor);
+  g.circle(0, -6, 4);
+  g.fill(shadeColor(metalColor, -0.2));
+
+  // Lever handle - angle based on state
+  const angle = isOn ? -Math.PI / 4 : Math.PI / 4;
+  const handleLength = 18;
+  const handleEndX = Math.sin(angle) * handleLength;
+  const handleEndY = -6 - Math.cos(angle) * handleLength;
+
+  // Handle shaft
+  g.moveTo(0, -6);
+  g.lineTo(handleEndX, handleEndY);
+  g.stroke({ color: metalColor, width: 4 });
+
+  // Handle knob
+  g.circle(handleEndX, handleEndY, 5);
+  g.fill(handleColor);
+  g.circle(handleEndX, handleEndY, 3);
+  g.fill(shadeColor(handleColor, 0.3));
+
+  // Highlight on knob
+  g.circle(handleEndX - 1, handleEndY - 1, 1.5);
+  g.fill(shadeColor(handleColor, 0.5));
+
+  // State indicator text area
+  g.rect(-8, 0, 16, 3);
+  g.fill(isOn ? 0x4caf50 : 0x263238);
+
+  container.addChild(g);
+  return container;
 }
 
 // Export light direction for external use

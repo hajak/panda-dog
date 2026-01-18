@@ -4,7 +4,7 @@
    ============================================ */
 
 import { Container } from 'pixi.js';
-import { createPropShape, createDoorShape, createPickupShape } from '../engine/ShapeRenderer';
+import { createPropShape, createDoorShape, createPickupShape, createStairsShape, createLeverShape } from '../engine/ShapeRenderer';
 import { worldToScreen, getDepthValue, distanceXY } from '../engine/isometric';
 import type { WorldPos } from '../engine/types';
 
@@ -35,10 +35,13 @@ export interface Prop {
 const FADE_SPEED = 4; // Alpha change per second
 const OCCLUSION_DISTANCE = 2; // Distance at which props start fading
 const MIN_ALPHA = 0.3; // Minimum alpha when occluded
+const PICKUP_BOB_SPEED = 3; // Bobbing speed for pickups
+const PICKUP_BOB_HEIGHT = 4; // Bobbing height in pixels
 
 export class PropManager {
   private props: Map<string, Prop> = new Map();
   private container: Container;
+  private animTime: number = 0;
 
   constructor(parentContainer: Container) {
     this.container = new Container();
@@ -121,6 +124,24 @@ export class PropManager {
    * Update occlusion fading based on player position
    */
   updateOcclusion(playerPos: WorldPos, deltaTime: number): void {
+    // Update animation time
+    this.animTime += deltaTime;
+
+    // Animate pickups (bobbing effect)
+    for (const prop of this.props.values()) {
+      if (prop.type.startsWith('pickup_')) {
+        const bobOffset = Math.sin(this.animTime * PICKUP_BOB_SPEED) * PICKUP_BOB_HEIGHT;
+        const screen = worldToScreen(prop.position);
+        prop.container.x = screen.x;
+        prop.container.y = screen.y + bobOffset;
+
+        // Also rotate shurikens
+        if (prop.type === 'pickup_shuriken') {
+          prop.container.rotation = this.animTime * 2;
+        }
+      }
+    }
+
     for (const prop of this.props.values()) {
       if (!prop.occluder) continue;
 
@@ -213,6 +234,12 @@ export class PropManager {
       case 'gate':
         return createDoorShape(state === 'open');
 
+      case 'stairs_down':
+        return createStairsShape('down');
+
+      case 'stairs_up':
+        return createStairsShape('up');
+
       case 'pickup_shuriken':
         return createPickupShape('shuriken');
 
@@ -221,6 +248,9 @@ export class PropManager {
 
       case 'pickup_key':
         return createPickupShape('key');
+
+      case 'lever':
+        return createLeverShape(state === 'on');
 
       case 'tree':
       case 'bush':
@@ -250,6 +280,9 @@ export class PropManager {
       rock: 0.5,
       door: 0.8,
       gate: 1.0,
+      lever: 0.5,
+      stairs_down: 1.0,
+      stairs_up: 1.0,
     };
     return radii[type] ?? 0.5;
   }

@@ -21,6 +21,9 @@ export class Tilemap {
   private visuals: Map<string, TileVisual> = new Map();
   private groundLayer: Container;
   private wallLayer: Container;
+  // Internal containers for tiles only (so we don't remove other things from layers)
+  private groundTilesContainer: Container;
+  private wallTilesContainer: Container;
 
   constructor(groundLayer: Container, wallLayer: Container) {
     this.width = 0;
@@ -28,6 +31,15 @@ export class Tilemap {
     this.tiles = [];
     this.groundLayer = groundLayer;
     this.wallLayer = wallLayer;
+
+    // Create dedicated containers for tiles
+    this.groundTilesContainer = new Container();
+    this.groundTilesContainer.sortableChildren = true;
+    this.groundLayer.addChild(this.groundTilesContainer);
+
+    this.wallTilesContainer = new Container();
+    this.wallTilesContainer.sortableChildren = true;
+    this.wallLayer.addChild(this.wallTilesContainer);
   }
 
   /**
@@ -225,9 +237,9 @@ export class Tilemap {
   }
 
   private buildVisuals(): void {
-    // Clear existing
-    this.groundLayer.removeChildren();
-    this.wallLayer.removeChildren();
+    // Clear only our tile containers (not the entire layer)
+    this.groundTilesContainer.removeChildren();
+    this.wallTilesContainer.removeChildren();
     this.visuals.clear();
 
     // Build tiles from back to front for proper depth
@@ -238,8 +250,8 @@ export class Tilemap {
     }
 
     // Sort by depth
-    this.groundLayer.sortChildren();
-    this.wallLayer.sortChildren();
+    this.groundTilesContainer.sortChildren();
+    this.wallTilesContainer.sortChildren();
   }
 
   private createTileVisual(col: number, row: number): void {
@@ -256,11 +268,11 @@ export class Tilemap {
     const visual = this.getTileGraphics(tile);
     container.addChild(visual);
 
-    // Add to appropriate layer
+    // Add to appropriate tile container
     if (tile.type === 'wall' || tile.elevation > 1) {
-      this.wallLayer.addChild(container);
+      this.wallTilesContainer.addChild(container);
     } else {
-      this.groundLayer.addChild(container);
+      this.groundTilesContainer.addChild(container);
     }
 
     this.visuals.set(key, { container, baseY: screen.y });

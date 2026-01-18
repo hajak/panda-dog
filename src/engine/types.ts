@@ -64,6 +64,9 @@ export type EntityType =
   | 'player'
   | 'guard'
   | 'archer'
+  | 'skeleton'
+  | 'oni'
+  | 'boss'
   | 'projectile'
   | 'pickup'
   | 'interactable';
@@ -208,7 +211,9 @@ export type InteractableType =
   | 'lever'
   | 'chest'
   | 'pickup_shuriken'
-  | 'pickup_health';
+  | 'pickup_health'
+  | 'stairs_down'
+  | 'stairs_up';
 
 export interface InteractableData {
   type: InteractableType;

@@ -273,4 +273,112 @@ export const ParticleEffects = {
       fadeOut: true,
     });
   },
+
+  attackSwing(system: ParticleSystem, position: WorldPos, direction: Vec2): void {
+    // Create arc of particles to show sword/weapon swing
+    const baseAngle = Math.atan2(direction.y, direction.x);
+    const arcWidth = Math.PI * 0.6; // 108 degree arc
+    const numParticles = 8;
+
+    for (let i = 0; i < numParticles; i++) {
+      const t = i / (numParticles - 1);
+      const angle = baseAngle - arcWidth / 2 + arcWidth * t;
+      const distance = 0.8 + Math.random() * 0.4;
+
+      // Yellow/white slash color
+      const color = i % 2 === 0 ? 0xfde047 : 0xffffff;
+
+      system.emit({
+        position: {
+          x: position.x + Math.cos(angle) * distance,
+          y: position.y + Math.sin(angle) * distance,
+          z: position.z + 0.5,
+        },
+        velocity: {
+          x: Math.cos(angle) * 3,
+          y: Math.sin(angle) * 3,
+        },
+        color,
+        size: 4 - Math.abs(t - 0.5) * 2, // Larger in middle
+        lifetime: 0.15,
+        fadeOut: true,
+        shrink: true,
+      });
+    }
+
+    // Add impact spark at the center
+    system.emit({
+      position: {
+        x: position.x + direction.x * 1.2,
+        y: position.y + direction.y * 1.2,
+        z: position.z + 0.5,
+      },
+      velocity: { x: direction.x * 2, y: direction.y * 2 },
+      color: 0xffffff,
+      size: 6,
+      lifetime: 0.1,
+      fadeOut: true,
+      shrink: true,
+    });
+  },
+
+  enemyAttack(system: ParticleSystem, position: WorldPos, direction: Vec2): void {
+    // Red slash effect for enemy attacks
+    const baseAngle = Math.atan2(direction.y, direction.x);
+
+    for (let i = 0; i < 5; i++) {
+      const angle = baseAngle + (Math.random() - 0.5) * Math.PI * 0.4;
+      const distance = 0.6 + Math.random() * 0.3;
+
+      system.emit({
+        position: {
+          x: position.x + Math.cos(angle) * distance,
+          y: position.y + Math.sin(angle) * distance,
+          z: position.z + 0.4,
+        },
+        velocity: {
+          x: Math.cos(angle) * 2,
+          y: Math.sin(angle) * 2,
+        },
+        color: 0xef4444,
+        size: 3,
+        lifetime: 0.12,
+        fadeOut: true,
+        shrink: true,
+      });
+    }
+  },
+
+  pickup(system: ParticleSystem, position: WorldPos, color: number): void {
+    // Sparkle burst when picking up items
+    system.emitBurst(
+      { ...position, z: position.z + 0.3 },
+      16,
+      color,
+      4,
+      0.5,
+      { size: 5, fadeOut: true, shrink: true }
+    );
+
+    // Rising sparkles
+    for (let i = 0; i < 8; i++) {
+      system.emit({
+        position: {
+          x: position.x + (Math.random() - 0.5) * 0.5,
+          y: position.y + (Math.random() - 0.5) * 0.5,
+          z: position.z,
+        },
+        velocity: {
+          x: (Math.random() - 0.5) * 2,
+          y: (Math.random() - 0.5) * 2,
+        },
+        color: 0xffffff,
+        size: 3,
+        lifetime: 0.6 + Math.random() * 0.4,
+        gravity: -3, // Float upward
+        fadeOut: true,
+        shrink: true,
+      });
+    }
+  },
 };

@@ -5,6 +5,8 @@
 import { GameApplication } from './engine/Application';
 import { GameScene } from './game/GameScene';
 import { createHUD } from './ui/HUD';
+import { audioPlayer } from './engine/AudioPlayer';
+import { musicPlayer } from './engine/MusicPlayer';
 
 async function main(): Promise<void> {
   // Get canvas element
@@ -37,6 +39,25 @@ async function main(): Promise<void> {
 
     // Hide loading
     hideLoading(uiOverlay);
+
+    // Initialize audio on first user interaction (browser autoplay policy)
+    const initAudio = () => {
+      audioPlayer.init();
+      musicPlayer.init();
+      musicPlayer.play(); // Start background music
+      document.removeEventListener('keydown', initAudio);
+      document.removeEventListener('click', initAudio);
+    };
+    document.addEventListener('keydown', initAudio, { once: true });
+    document.addEventListener('click', initAudio, { once: true });
+
+    // Toggle music with M key
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyM') {
+        musicPlayer.toggle();
+        console.log(`Music ${musicPlayer.isCurrentlyPlaying() ? 'ON' : 'OFF'}`);
+      }
+    });
 
     // Handle window resize
     window.addEventListener('resize', () => {

@@ -86,6 +86,8 @@ export class CombatSystem {
       ? { x: (dx / dist) * attack.knockback, y: (dy / dist) * attack.knockback }
       : { x: 0, y: 0 };
 
+    console.log(`HIT! Enemy at ${enemy.position.x.toFixed(1)},${enemy.position.y.toFixed(1)} - damage=${attack.damage} health=${enemy.health} -> ${enemy.health - attack.damage}`);
+
     enemy.onHit(attack.damage, knockback);
 
     const eventType = enemy.health <= 0 ? 'kill' : 'hit';

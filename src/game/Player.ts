@@ -70,9 +70,18 @@ export class Player extends Entity {
   ];
   activeSlot: number = 0;
 
+  // Throw callback for projectile spawning
+  onThrow: ((direction: Vec2) => void) | null = null;
+
   // Visuals
   private characterSprite: Container;
   private selectionRing: ReturnType<typeof createHighlightRing>;
+
+  // Animation
+  private walkAnimTime: number = 0;
+  private walkBobSpeed: number = 14; // Bob frequency
+  private walkBobHeight: number = 2; // Bob amplitude in pixels
+  private walkSwayAmount: number = 0.08; // Rotation sway
 
   constructor(x: number, y: number, z: number = 0) {
     super(x, y, z);
@@ -338,7 +347,7 @@ export class Player extends Entity {
     this.attackCombo = (this.attackCombo % COMBO_ATTACKS) + 1;
     this.attackCooldown = 300; // ms
     this.comboTimer = LIGHT_ATTACK_COMBO_WINDOW;
-    this.attackFrame = 1; // Set to 1 to signal hit detection on this frame
+    this.attackFrame = 2; // Set to 2 so it's 1 after first update decrement
   }
 
   private startBlock(): void {
@@ -357,7 +366,24 @@ export class Player extends Entity {
     const slot = this.inventory[this.activeSlot];
     if (slot.itemType === 'shuriken' && slot.count > 0) {
       slot.count--;
-      // Throw would emit projectile spawn event
+
+      // Get throw direction based on facing
+      const directions: Record<string, Vec2> = {
+        E: { x: 1, y: 0 },
+        SE: { x: 0.707, y: 0.707 },
+        S: { x: 0, y: 1 },
+        SW: { x: -0.707, y: 0.707 },
+        W: { x: -1, y: 0 },
+        NW: { x: -0.707, y: -0.707 },
+        N: { x: 0, y: -1 },
+        NE: { x: 0.707, y: -0.707 },
+      };
+      const direction = directions[this.facing] ?? { x: 1, y: 0 };
+
+      // Emit throw event
+      if (this.onThrow) {
+        this.onThrow(direction);
+      }
     }
   }
 
@@ -489,20 +515,58 @@ export class Player extends Entity {
 
     this.characterSprite.alpha = alpha;
 
-    // Visual scale based on state
+    // Visual scale and animation based on state
     let scaleY = 1;
+    let scaleX = 1;
+    let bobOffset = 0;
+    let rotation = 0;
+
+    const isMoving = this.state === 'walk' || this.state === 'run';
+
+    if (isMoving) {
+      // Walking/running animation
+      const speedMult = this.state === 'run' ? 1.5 : 1;
+      this.walkAnimTime += 0.016 * this.walkBobSpeed * speedMult; // Approximate deltaTime
+
+      // Bobbing up and down
+      bobOffset = Math.sin(this.walkAnimTime) * this.walkBobHeight * speedMult;
+
+      // Squash and stretch with movement
+      const squash = Math.sin(this.walkAnimTime * 2) * 0.05;
+      scaleY = 1 - squash;
+      scaleX = 1 + squash * 0.5;
+
+      // Slight sway/lean in movement direction
+      rotation = Math.sin(this.walkAnimTime) * this.walkSwayAmount * speedMult;
+
+      // Lean into movement direction
+      if (this.velocity.x > 0.1) rotation += 0.05;
+      else if (this.velocity.x < -0.1) rotation -= 0.05;
+    } else {
+      // Reset walk animation when stopped
+      this.walkAnimTime = 0;
+    }
+
     if (this.state === 'jump') {
       scaleY = 1.1; // Stretch when jumping
+      scaleX = 0.9;
     } else if (this.state === 'land') {
-      scaleY = 0.9; // Squash on landing
+      scaleY = 0.85; // Squash on landing
+      scaleX = 1.1;
     } else if (this.state === 'climb') {
-      scaleY = 0.95; // Slightly compressed when climbing
+      scaleY = 0.95;
+      // Climbing bob
+      bobOffset = Math.sin(Date.now() * 0.008) * 1.5;
+    } else if (this.state === 'attack') {
+      // Attack lunge
+      const attackProgress = this.attackCooldown / 300;
+      scaleX = 1 + attackProgress * 0.15;
+      rotation = (this.facing === 'E' || this.facing === 'NE' || this.facing === 'SE') ? 0.1 : -0.1;
     }
-    this.characterSprite.scale.y = scaleY;
 
-    // Tint based on state
-    // Note: For PixiJS 8, tinting might need different approach
-    // This is a placeholder for visual feedback
+    this.characterSprite.scale.set(scaleX, scaleY);
+    this.characterSprite.rotation = rotation;
+    this.characterSprite.y = bobOffset;
   }
 
   /**

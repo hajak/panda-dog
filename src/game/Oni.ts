@@ -1,82 +1,77 @@
 /* ============================================
-   SHADOW NINJA - Guard Enemy
-   Melee patrol enemy with vision cone
+   SHADOW NINJA - Oni Enemy
+   Slow, powerful demon with high health
    ============================================ */
 
 import { Enemy, EnemyConfig, PatrolPoint } from './Enemy';
 import { Entity } from './Entity';
 import { createCharacterShape } from '../engine/ShapeRenderer';
-import { COLORS, KNOCKBACK_FORCE } from '../engine/constants';
+import { KNOCKBACK_FORCE } from '../engine/constants';
 import type { Vec2 } from '../engine/types';
 
-const GUARD_ATTACK_RANGE = 1.4;
-const GUARD_ATTACK_DAMAGE = 20;
-const GUARD_ATTACK_COOLDOWN = 800; // Fast attacks
+const ONI_ATTACK_RANGE = 1.8;
+const ONI_ATTACK_DAMAGE = 40;
+const ONI_ATTACK_COOLDOWN = 1200; // Heavy hits
 
-export interface GuardAttackEvent {
+export interface OniAttackEvent {
   position: { x: number; y: number; z: number };
   direction: Vec2;
 }
 
-export class Guard extends Enemy {
+export class Oni extends Enemy {
   private attackCooldown: number = 0;
   private characterSprite: ReturnType<typeof createCharacterShape>;
 
-  // Callback for attack visual effects
-  onAttack: ((event: GuardAttackEvent) => void) | null = null;
+  onAttack: ((event: OniAttackEvent) => void) | null = null;
 
-  // Walk animation
   private walkAnimTime: number = 0;
-  private walkBobSpeed: number = 10;
-  private walkBobHeight: number = 1.5;
+  private walkBobSpeed: number = 6; // Slow, heavy steps
+  private walkBobHeight: number = 3;
 
   constructor(x: number, y: number, patrolPoints?: PatrolPoint[]) {
     const config: EnemyConfig = {
       x,
       y,
       type: 'guard',
-      health: 40,
+      health: 120, // Very high health
       patrolPoints,
-      visionRange: 6,
+      visionRange: 9, // Excellent vision range
       visionAngle: Math.PI / 3, // 60 degrees
     };
     super(config);
 
-    // Create visual
-    this.characterSprite = createCharacterShape(COLORS.GUARD, 1, 'guard');
+    // Override speed - Oni are moderately slow but relentless
+    this.moveSpeed = 2.5;
+
+    // Create Oni visual - red/crimson color, larger
+    this.characterSprite = createCharacterShape(0xc62828, 1.3, 'guard');
     this.container.addChild(this.characterSprite);
   }
 
   update(deltaTime: number): void {
-    // Update attack cooldown
     if (this.attackCooldown > 0) {
       this.attackCooldown -= deltaTime * 1000;
     }
-
     super.update(deltaTime);
   }
 
   attack(target: Entity): void {
     if (this.attackCooldown > 0) return;
 
-    this.attackCooldown = GUARD_ATTACK_COOLDOWN;
+    this.attackCooldown = ONI_ATTACK_COOLDOWN;
 
-    // Calculate knockback direction
     const dx = target.position.x - this.position.x;
     const dy = target.position.y - this.position.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
+    // Strong knockback
     const knockback: Vec2 = dist > 0.01
-      ? { x: (dx / dist) * KNOCKBACK_FORCE, y: (dy / dist) * KNOCKBACK_FORCE }
+      ? { x: (dx / dist) * KNOCKBACK_FORCE * 2, y: (dy / dist) * KNOCKBACK_FORCE * 2 }
       : { x: 0, y: 0 };
 
-    // Deal damage
-    target.onHit(GUARD_ATTACK_DAMAGE, knockback);
-
-    // Play attack animation
+    target.onHit(ONI_ATTACK_DAMAGE, knockback);
     this.playAnimation('attack', false);
 
-    // Emit attack event for visual effects
     if (this.onAttack && dist > 0.01) {
       this.onAttack({
         position: { ...this.position },
@@ -86,57 +81,61 @@ export class Guard extends Enemy {
   }
 
   getAttackRange(): number {
-    return GUARD_ATTACK_RANGE;
+    return ONI_ATTACK_RANGE;
   }
 
   updateVisual(): void {
-    // Update sprite alpha based on state
-    let alpha = 1;
     let scaleX = 1;
     let scaleY = 1;
     let bobOffset = 0;
     let rotation = 0;
 
-    // Check if moving
     const isMoving = Math.abs(this.velocity.x) > 0.1 || Math.abs(this.velocity.y) > 0.1;
     const isChasing = this.aiState === 'chase' || this.aiState === 'alert';
 
     if (isMoving) {
-      // Walking animation
-      const speedMult = isChasing ? 1.4 : 1;
+      const speedMult = isChasing ? 1.2 : 1;
       this.walkAnimTime += 0.016 * this.walkBobSpeed * speedMult;
 
-      // Bobbing
-      bobOffset = Math.sin(this.walkAnimTime) * this.walkBobHeight * speedMult;
+      // Heavy, stomping movement
+      bobOffset = Math.abs(Math.sin(this.walkAnimTime)) * this.walkBobHeight;
 
-      // Squash and stretch
-      const squash = Math.sin(this.walkAnimTime * 2) * 0.04;
-      scaleY = 1 - squash;
-      scaleX = 1 + squash * 0.4;
+      // Ground shake effect - quick squash on each step
+      const step = Math.sin(this.walkAnimTime);
+      if (step > 0.9) {
+        scaleY = 0.92;
+        scaleX = 1.08;
+      }
 
       // Slight sway
-      rotation = Math.sin(this.walkAnimTime) * 0.06 * speedMult;
+      rotation = Math.sin(this.walkAnimTime * 0.5) * 0.04;
     } else {
       this.walkAnimTime = 0;
     }
 
-    // Flash when attacking
-    if (this.attackCooldown > GUARD_ATTACK_COOLDOWN - 200) {
-      alpha = 0.7 + Math.sin(Date.now() * 0.03) * 0.3;
-      scaleX = 1.1; // Lunge forward
-      rotation = this.velocity.x > 0 ? 0.1 : -0.1;
+    // Attack windup - pull back then lunge
+    if (this.attackCooldown > ONI_ATTACK_COOLDOWN - 300) {
+      const t = (this.attackCooldown - (ONI_ATTACK_COOLDOWN - 300)) / 300;
+      if (t > 0.5) {
+        // Windup
+        scaleY = 1.1;
+        scaleX = 0.9;
+      } else {
+        // Smash
+        scaleY = 0.85;
+        scaleX = 1.2;
+      }
+      rotation = Math.sin(Date.now() * 0.02) * 0.15;
     }
 
-    // Alert state - slightly larger, more aggressive pose
+    // Rage glow when chasing
     if (isChasing && !isMoving) {
-      scaleX = 1.05;
-      scaleY = 1.05;
-      // Breathing animation when alert
-      const breathe = Math.sin(Date.now() * 0.005) * 0.03;
-      scaleY += breathe;
+      // Breathing/pulsing when alert
+      const pulse = Math.sin(Date.now() * 0.008) * 0.05;
+      scaleX = 1.05 + pulse;
+      scaleY = 1.05 - pulse;
     }
 
-    this.characterSprite.alpha = alpha;
     this.characterSprite.scale.set(scaleX, scaleY);
     this.characterSprite.rotation = rotation;
     this.characterSprite.y = bobOffset;

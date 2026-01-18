@@ -10,8 +10,11 @@ import { Input } from '../engine/Input';
 import { Player } from './Player';
 import { Entity } from './Entity';
 import { Enemy } from './Enemy';
-import { Guard } from './Guard';
+import { Guard, GuardAttackEvent } from './Guard';
 import { Archer, ProjectileSpawnEvent } from './Archer';
+import { Skeleton, SkeletonAttackEvent } from './Skeleton';
+import { Oni, OniAttackEvent } from './Oni';
+import { Boss, BossAttackEvent, BossShurikenEvent } from './Boss';
 import { CollisionSystem } from './Collision';
 import { PropManager } from './PropManager';
 import { InteractableManager, InteractionEffect } from './Interactable';
@@ -23,6 +26,26 @@ import { DebugUI } from '../ui/DebugUI';
 import { LAYERS, FIXED_TIMESTEP, CANVAS_WIDTH, CANVAS_HEIGHT, KNOCKBACK_FORCE } from '../engine/constants';
 import type { DebugOptions, WorldPos } from '../engine/types';
 import { createCourtyardLevel } from '../levels/Courtyard';
+import { createDungeonLevel } from '../levels/Dungeon';
+import { createDungeonB1Level } from '../levels/DungeonB1';
+import { createDungeonB2Level } from '../levels/DungeonB2';
+import { createDungeonB3Level } from '../levels/DungeonB3';
+
+// Level registry
+const LEVELS: Record<string, () => ReturnType<typeof createCourtyardLevel>> = {
+  courtyard: createCourtyardLevel,
+  dungeon: createDungeonLevel,
+  dungeon_b1: createDungeonB1Level,
+  dungeon_b2: createDungeonB2Level,
+  dungeon_b3: createDungeonB3Level,
+};
+
+interface LevelExit {
+  x: number;
+  y: number;
+  targetLevel: string;
+  targetSpawn: { x: number; y: number };
+}
 
 export class GameScene {
   private app: GameApplication;
@@ -75,6 +98,18 @@ export class GameScene {
   private gameOver: boolean = false;
   private gameOverElement: HTMLElement | null = null;
 
+  // Level state
+  private currentLevel: string = 'courtyard';
+  private levelExits: LevelExit[] = [];
+
+  // Persistent state - track killed enemies per level
+  private killedEnemies: Map<string, Set<number>> = new Map();
+
+  // Score system
+  private score: number = 0;
+  private highScore: number = 0;
+  private static readonly HIGHSCORE_KEY = 'shadow-ninja-highscore';
+
   constructor(app: GameApplication) {
     this.app = app;
     this.camera = new Camera();
@@ -93,35 +128,84 @@ export class GameScene {
   }
 
   async init(): Promise<void> {
-    // Load level
-    const levelData = createCourtyardLevel();
-    this.tilemap.load(levelData.width, levelData.height, levelData.tiles);
+    // Load high score from storage
+    this.loadHighScore();
 
-    // Initialize collision system
-    this.collision = new CollisionSystem(this.tilemap);
-
-    // Initialize prop manager
+    // Initialize managers (only once)
     this.propManager = new PropManager(this.propLayer);
-
-    // Initialize projectile manager
     this.projectileManager = new ProjectileManager(this.projectileLayer);
-
-    // Initialize particle system
     this.particles = new ParticleSystem(this.app.getLayer(LAYERS.EFFECTS));
 
+    // Load the starting level
+    this.loadLevel('courtyard');
+
+    // Add player to entity layer
+    this.entityLayer.addChild(this.player.container);
+    this.entities.push(this.player);
+
+    // Set up player throw callback
+    this.player.onThrow = (direction) => {
+      this.handlePlayerThrow(direction);
+    };
+
+    // Set up camera
+    this.camera.snapToTarget(this.player.position);
+
+    // Start game loop
+    this.lastTime = performance.now();
+    this.app.ticker.add(this.gameLoop);
+  }
+
+  private loadLevel(levelName: string, spawnPos?: { x: number; y: number }): void {
+    const levelFactory = LEVELS[levelName];
+    if (!levelFactory) {
+      console.error(`Level not found: ${levelName}`);
+      return;
+    }
+
+    // Clear existing level entities (but not player)
+    for (const enemy of this.enemies) {
+      this.entityLayer.removeChild(enemy.container);
+      enemy.container.destroy({ children: true });
+    }
+    this.enemies = [];
+    this.entities = this.entities.filter(e => e === this.player);
+
+    // Clear interactables
+    this.interactables.clear();
+
+    // Clear props
+    if (this.propManager) {
+      for (const prop of this.propManager.getAllProps()) {
+        this.propManager.removeProp(prop.id);
+      }
+    }
+
+    // Load new level data
+    const levelData = levelFactory();
+    this.currentLevel = levelName;
+    this.levelExits = levelData.exits || [];
+
+    // Load tilemap
+    this.tilemap.load(levelData.width, levelData.height, levelData.tiles);
+
+    // Initialize/update collision system
+    this.collision = new CollisionSystem(this.tilemap);
+
     // Add props from level data
-    for (const propData of levelData.props) {
-      this.propManager.addProp({
-        id: `prop_${propData.type}_${propData.x}_${propData.y}`,
-        type: propData.type,
-        x: propData.x,
-        y: propData.y,
-      });
+    if (this.propManager) {
+      for (const propData of levelData.props) {
+        this.propManager.addProp({
+          id: `prop_${propData.type}_${propData.x}_${propData.y}`,
+          type: propData.type,
+          x: propData.x,
+          y: propData.y,
+        });
+      }
     }
 
     // Add interactables from level data
     for (const interactData of levelData.interactables) {
-      // Register interactable
       this.interactables.register({
         id: `interact_${interactData.type}_${interactData.x}_${interactData.y}`,
         type: interactData.type as never,
@@ -129,49 +213,99 @@ export class GameScene {
         properties: interactData.properties,
       });
 
-      // Add visual prop for pickups
-      if (interactData.type.startsWith('pickup_')) {
-        this.propManager.addProp({
-          id: `interact_${interactData.type}_${interactData.x}_${interactData.y}`,
-          type: interactData.type,
-          x: interactData.x,
-          y: interactData.y,
-          interactive: true,
-        });
-      } else if (interactData.type === 'door') {
-        this.propManager.addProp({
-          id: `interact_${interactData.type}_${interactData.x}_${interactData.y}`,
-          type: 'door',
-          x: interactData.x,
-          y: interactData.y,
-          interactive: true,
-          state: 'closed',
-        });
+      // Add visual prop for pickups, doors, and stairs
+      if (this.propManager) {
+        if (interactData.type.startsWith('pickup_')) {
+          this.propManager.addProp({
+            id: `interact_${interactData.type}_${interactData.x}_${interactData.y}`,
+            type: interactData.type,
+            x: interactData.x,
+            y: interactData.y,
+            interactive: true,
+          });
+        } else if (interactData.type === 'door') {
+          this.propManager.addProp({
+            id: `interact_${interactData.type}_${interactData.x}_${interactData.y}`,
+            type: 'door',
+            x: interactData.x,
+            y: interactData.y,
+            interactive: true,
+            state: 'closed',
+          });
+        } else if (interactData.type === 'stairs_down' || interactData.type === 'stairs_up') {
+          this.propManager.addProp({
+            id: `interact_${interactData.type}_${interactData.x}_${interactData.y}`,
+            type: interactData.type,
+            x: interactData.x,
+            y: interactData.y,
+            interactive: true,
+          });
+        } else if (interactData.type === 'lever') {
+          this.propManager.addProp({
+            id: `interact_${interactData.type}_${interactData.x}_${interactData.y}`,
+            type: 'lever',
+            x: interactData.x,
+            y: interactData.y,
+            interactive: true,
+            state: 'off',
+          });
+        }
       }
     }
 
-    // Spawn enemies from level data
-    for (const enemyData of levelData.enemySpawns) {
+    // Get killed enemies for this level
+    const killedInLevel = this.killedEnemies.get(levelName) || new Set();
+
+    // Spawn enemies from level data, skipping killed ones (they stay dead)
+    for (let i = 0; i < levelData.enemySpawns.length; i++) {
+      const enemyData = levelData.enemySpawns[i];
+
+      // Skip enemies that were previously killed - they stay dead
+      if (killedInLevel.has(i)) {
+        continue;
+      }
+
       const patrolPoints = enemyData.patrol?.map((p) => ({ x: p.x, y: p.y }));
 
       let enemy: Enemy;
       if (enemyData.type === 'guard') {
-        enemy = new Guard(enemyData.x, enemyData.y, patrolPoints);
+        const guard = new Guard(enemyData.x, enemyData.y, patrolPoints);
+        guard.onAttack = (event: GuardAttackEvent) => {
+          this.handleGuardAttack(event);
+        };
+        enemy = guard;
       } else if (enemyData.type === 'archer') {
         const archer = new Archer(enemyData.x, enemyData.y, patrolPoints);
-        // Set up projectile spawn callback
         archer.onSpawnProjectile = (event: ProjectileSpawnEvent) => {
           this.handleArcherProjectile(event);
         };
         enemy = archer;
+      } else if (enemyData.type === 'skeleton') {
+        const skeleton = new Skeleton(enemyData.x, enemyData.y, patrolPoints);
+        skeleton.onAttack = (event: SkeletonAttackEvent) => {
+          this.handleGuardAttack(event); // Reuse guard attack handler
+        };
+        enemy = skeleton;
+      } else if (enemyData.type === 'oni') {
+        const oni = new Oni(enemyData.x, enemyData.y, patrolPoints);
+        oni.onAttack = (event: OniAttackEvent) => {
+          this.handleGuardAttack(event); // Reuse guard attack handler
+        };
+        enemy = oni;
+      } else if (enemyData.type === 'boss') {
+        const boss = new Boss(enemyData.x, enemyData.y, patrolPoints);
+        boss.onAttack = (event: BossAttackEvent) => {
+          this.handleBossAttack(event);
+        };
+        boss.onSpawnShuriken = (event: BossShurikenEvent) => {
+          this.handleBossShuriken(event);
+        };
+        enemy = boss;
       } else {
         continue;
       }
 
-      // Set enemy z position to match tile elevation at spawn point
       enemy.position.z = this.collision.getGroundElevation(enemy.position);
-
-      // Set initial facing direction if specified
       if (enemyData.facing) {
         enemy.facing = enemyData.facing;
       }
@@ -181,18 +315,36 @@ export class GameScene {
       this.entityLayer.addChild(enemy.container);
     }
 
-    // Set up player with correct elevation
-    this.player.position = { x: levelData.playerSpawn.x, y: levelData.playerSpawn.y, z: 0 };
+    // Set player position
+    const spawn = spawnPos || levelData.playerSpawn;
+    this.player.position = { x: spawn.x, y: spawn.y, z: 0 };
     this.player.position.z = this.collision.getGroundElevation(this.player.position);
-    this.entityLayer.addChild(this.player.container);
-    this.entities.push(this.player);
 
-    // Set up camera - follow player without restrictive bounds
+    // Snap camera to new position
     this.camera.snapToTarget(this.player.position);
 
-    // Start game loop
-    this.lastTime = performance.now();
-    this.app.ticker.add(this.gameLoop);
+    console.log(`Loaded level: ${levelName}`);
+  }
+
+  private checkLevelExits(): void {
+    // Check if player is near a door exit
+    for (const exit of this.levelExits) {
+      const dx = this.player.position.x - exit.x;
+      const dy = this.player.position.y - exit.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < 1.0) {
+        // Check if the door at this position is open
+        const doorId = `interact_door_${exit.x}_${exit.y}`;
+        const door = this.interactables.get(doorId);
+
+        if (door && door.state === 'active') {
+          // Door is open - transition to new level
+          this.loadLevel(exit.targetLevel, exit.targetSpawn);
+          return;
+        }
+      }
+    }
   }
 
   private gameLoop = (): void => {
@@ -291,6 +443,9 @@ export class GameScene {
     // Process combat
     this.processCombat();
 
+    // Apply enemy knockback with collision checking
+    this.applyEnemyKnockback();
+
     // Collision detection with new system
     this.handleCollisions(deltaTime);
 
@@ -304,6 +459,9 @@ export class GameScene {
     if (this.input.getState().interactPressed && this.nearbyInteractable) {
       this.handleInteraction(this.nearbyInteractable.id);
     }
+
+    // Check for level exits (when near an open door)
+    this.checkLevelExits();
 
     // Handle player attacks
     this.handlePlayerAttacks();
@@ -344,8 +502,29 @@ export class GameScene {
     if (nearest && nearest.state !== 'used') {
       // Auto-pickup for health and shuriken pickups
       if (nearest.type === 'pickup_health' || nearest.type === 'pickup_shuriken') {
-        this.handleInteraction(nearest.id);
+        // Store ID and position before handling so we can remove the prop and show effects
+        const pickupId = nearest.id;
+        const pickupPos = { ...nearest.position };
+        const isHealth = nearest.type === 'pickup_health';
+
+        this.handleInteraction(pickupId);
+
+        // Remove the visual prop
+        if (this.propManager) {
+          this.propManager.removeProp(pickupId);
+        }
+
+        // Pickup particle effect
+        if (this.particles) {
+          const color = isHealth ? 0xef4444 : 0x14b8a6; // Red for health, teal for shuriken
+          ParticleEffects.pickup(this.particles, pickupPos, color);
+        }
+
+        // Pickup sound
+        audioHooks.emit(isHealth ? 'pickup_health' : 'pickup_item');
+
         this.nearbyInteractable = null;
+        console.log(`Picked up: ${nearest.type}`);
         return;
       }
 
@@ -415,6 +594,10 @@ export class GameScene {
 
         case 'message':
           console.log('Game message:', effect.text);
+          break;
+
+        case 'level_transition':
+          this.loadLevel(effect.targetLevel, effect.targetSpawn);
           break;
       }
     }
@@ -489,6 +672,54 @@ export class GameScene {
     return true;
   }
 
+  private applyEnemyKnockback(): void {
+    if (!this.collision) return;
+
+    for (const enemy of this.enemies) {
+      if (!enemy.active) continue;
+
+      // Apply any pending knockback with collision checking
+      if (enemy.pendingKnockback) {
+        enemy.applyKnockback((from, toX, toY) => {
+          return this.collision!.canMoveTo(from as WorldPos, toX, toY);
+        });
+      }
+
+      // Safety check: if enemy somehow ended up in a wall, push them out
+      const tile = this.tilemap.getTile(
+        Math.floor(enemy.position.x),
+        Math.floor(enemy.position.y)
+      );
+
+      if (tile && !tile.walkable) {
+        // Find nearest valid position
+        const checkRadius = 0.5;
+        const directions = [
+          { x: 1, y: 0 },
+          { x: -1, y: 0 },
+          { x: 0, y: 1 },
+          { x: 0, y: -1 },
+        ];
+
+        for (const dir of directions) {
+          const testX = enemy.position.x + dir.x * checkRadius;
+          const testY = enemy.position.y + dir.y * checkRadius;
+          const testTile = this.tilemap.getTile(Math.floor(testX), Math.floor(testY));
+
+          if (testTile && testTile.walkable) {
+            enemy.position.x = testX;
+            enemy.position.y = testY;
+            break;
+          }
+        }
+      }
+
+      // Clamp to world bounds
+      enemy.position.x = Math.max(0.5, Math.min(this.tilemap.getWidth() - 0.5, enemy.position.x));
+      enemy.position.y = Math.max(0.5, Math.min(this.tilemap.getHeight() - 0.5, enemy.position.y));
+    }
+  }
+
   private processCombat(): void {
     // Process combat events
     const events = this.combatSystem.update(this.player, this.enemies);
@@ -499,6 +730,19 @@ export class GameScene {
         const enemy = event.defender as Enemy;
         enemy.active = false;
         enemy.container.visible = false;
+
+        // Award score based on enemy max health
+        const scoreValue = this.getEnemyScoreValue(enemy.maxHealth);
+        this.addScore(scoreValue);
+
+        // Track killed enemy for persistence
+        const enemyIndex = this.enemies.indexOf(enemy);
+        if (enemyIndex !== -1) {
+          if (!this.killedEnemies.has(this.currentLevel)) {
+            this.killedEnemies.set(this.currentLevel, new Set());
+          }
+          this.killedEnemies.get(this.currentLevel)!.add(enemyIndex);
+        }
 
         // Death particles and audio
         if (this.particles) {
@@ -579,12 +823,13 @@ export class GameScene {
     for (const enemy of this.enemies) {
       if (!enemy.active) continue;
 
+      // Check all projectiles against this enemy (no excludeOwner)
       const enemyHit = this.projectileManager.checkCollisions(
         enemy.position,
-        0.5, // Enemy hitbox radius
-        this.player.id // Only player projectiles can hit enemies
+        0.5 // Enemy hitbox radius
       );
 
+      // Only player-owned projectiles damage enemies
       if (enemyHit && enemyHit.owner === this.player.id) {
         enemy.onHit(enemyHit.damage, { x: 0, y: 0 });
         enemyHit.active = false;
@@ -599,15 +844,28 @@ export class GameScene {
 
       const hitbox: AttackHitbox = {
         position: { ...this.player.position },
-        range: 1.5,
+        range: 1.8,
         angle: dirAngle,
-        width: Math.PI / 2, // 90 degree arc
-        damage: 25,
+        width: Math.PI * 0.6, // 108 degree arc
+        damage: 20, // Reduced from 35 - takes 2 hits to kill guard
         knockback: KNOCKBACK_FORCE,
         owner: this.player,
       };
 
       this.combatSystem.registerAttack(hitbox);
+
+      // Attack swing visual effect
+      if (this.particles) {
+        const dirVec = {
+          x: Math.cos(dirAngle),
+          y: Math.sin(dirAngle),
+        };
+        ParticleEffects.attackSwing(this.particles, this.player.position, dirVec);
+      }
+
+      // Audio for attack swing
+      audioHooks.emit('player_attack');
+      console.log(`Attack registered: pos=${this.player.position.x.toFixed(1)},${this.player.position.y.toFixed(1)} dir=${this.player.facing} range=${hitbox.range}`);
     }
   }
 
@@ -623,6 +881,46 @@ export class GameScene {
       NE: -Math.PI / 4,
     };
     return angles[facing] ?? 0;
+  }
+
+  private handleGuardAttack(event: GuardAttackEvent): void {
+    // Enemy attack visual effect
+    if (this.particles) {
+      ParticleEffects.enemyAttack(this.particles, event.position, event.direction);
+    }
+    audioHooks.emit('enemy_attack');
+  }
+
+  private handleBossAttack(event: BossAttackEvent): void {
+    // Boss attack visual effect - more dramatic
+    if (this.particles) {
+      ParticleEffects.enemyAttack(this.particles, event.position, event.direction);
+      // Extra particles for boss
+      ParticleEffects.hit(this.particles, event.position, event.direction);
+    }
+    audioHooks.emit('enemy_attack');
+
+    // Camera shake for boss attacks
+    if (event.type === 'charge') {
+      this.camera.shake(6);
+    } else {
+      this.camera.shake(3);
+    }
+  }
+
+  private handleBossShuriken(event: BossShurikenEvent): void {
+    if (!this.projectileManager) return;
+
+    this.projectileManager.spawn({
+      type: 'shuriken',
+      position: event.position,
+      direction: event.direction,
+      speed: event.speed,
+      damage: event.damage,
+      owner: event.owner,
+    });
+
+    audioHooks.emit('shuriken_throw');
   }
 
   private handleArcherProjectile(event: ProjectileSpawnEvent): void {
@@ -641,6 +939,34 @@ export class GameScene {
     audioHooks.emit('archer_fire', {
       position: { x: event.position.x, y: event.position.y },
     });
+  }
+
+  private handlePlayerThrow(direction: { x: number; y: number }): void {
+    if (!this.projectileManager) return;
+
+    // Spawn shuriken from player position, slightly offset in throw direction
+    const spawnOffset = 0.5;
+    const spawnPos = {
+      x: this.player.position.x + direction.x * spawnOffset,
+      y: this.player.position.y + direction.y * spawnOffset,
+      z: this.player.position.z + 0.5, // Throw at chest height
+    };
+
+    this.projectileManager.spawn({
+      type: 'shuriken',
+      position: spawnPos,
+      direction: direction,
+      speed: 12, // Fast shuriken
+      damage: 25,
+      owner: this.player.id,
+    });
+
+    // Audio hook for shuriken throw
+    audioHooks.emit('shuriken_throw', {
+      position: { x: this.player.position.x, y: this.player.position.y },
+    });
+
+    console.log(`Shuriken thrown! Direction: ${direction.x.toFixed(2)}, ${direction.y.toFixed(2)}`);
   }
 
   private render(_alpha: number, deltaTime: number): void {
@@ -697,6 +1023,15 @@ export class GameScene {
       Math.floor(this.player.position.y)
     );
 
+    // Get interactables for debug view
+    const debugInteractables = this.interactables.getAll().map(i => ({
+      id: i.id,
+      type: i.type,
+      x: i.position.x,
+      y: i.position.y,
+      state: i.state,
+    }));
+
     this.debugUI.update({
       fps: this.fps,
       frameTime: this.frameTime,
@@ -711,6 +1046,8 @@ export class GameScene {
       tiles: this.tilemap.getAllTiles(),
       worldWidth: this.tilemap.getWidth(),
       worldHeight: this.tilemap.getHeight(),
+      interactables: debugInteractables,
+      currentLevel: this.currentLevel,
     });
   }
 
@@ -720,7 +1057,7 @@ export class GameScene {
     const staminaFill = document.querySelector('.stat-bar__fill--stamina') as HTMLElement;
     const healthValue = document.querySelector('.stat-bar__value') as HTMLElement;
     const ammoValue = document.querySelector('.ammo-counter__value') as HTMLElement;
-    const fpsDisplay = document.querySelector('.debug-panel') as HTMLElement;
+    const scoreValue = document.getElementById('score-value') as HTMLElement;
     const interactPrompt = document.getElementById('prompt-interact') as HTMLElement;
 
     if (healthFill) {
@@ -741,6 +1078,11 @@ export class GameScene {
       if (ammoCounter) {
         ammoCounter.classList.toggle('ammo-counter--low', shurikenSlot.count <= 2);
       }
+    }
+
+    // Update score display
+    if (scoreValue) {
+      scoreValue.textContent = this.score.toString();
     }
 
     // Update interact prompt
@@ -775,25 +1117,6 @@ export class GameScene {
     if (alertStatus) {
       alertStatus.style.display = anyEnemyAlert ? 'flex' : 'none';
     }
-
-    // Update debug panel
-    if (fpsDisplay && this.debugOptions.showFPS) {
-      const activeEnemies = this.enemies.filter((e) => e.active).length;
-      const alertEnemies = this.enemies.filter((e) => e.active && (e.aiState === 'alert' || e.aiState === 'chase')).length;
-
-      fpsDisplay.style.display = 'block';
-      fpsDisplay.innerHTML = `
-        <div class="debug-panel__row"><span class="debug-panel__label">FPS:</span> ${this.fps}</div>
-        <div class="debug-panel__row"><span class="debug-panel__label">Pos:</span> ${this.player.position.x.toFixed(1)}, ${this.player.position.y.toFixed(1)}, ${this.player.position.z.toFixed(1)}</div>
-        <div class="debug-panel__row"><span class="debug-panel__label">Elev:</span> ${this.player.groundElevation.toFixed(1)}</div>
-        <div class="debug-panel__row"><span class="debug-panel__label">State:</span> ${this.player.state}</div>
-        <div class="debug-panel__row"><span class="debug-panel__label">Hidden:</span> ${this.player.isHidden ? 'Yes' : 'No'}</div>
-        <div class="debug-panel__row"><span class="debug-panel__label">Enemies:</span> ${activeEnemies} (${alertEnemies} alert)</div>
-        <div class="debug-panel__row"><span class="debug-panel__label">Vision:</span> ${this.debugOptions.showVisionCones ? 'ON' : 'OFF'} [V]</div>
-      `;
-    } else if (fpsDisplay) {
-      fpsDisplay.style.display = 'none';
-    }
   }
 
   getPlayer(): Player {
@@ -813,11 +1136,17 @@ export class GameScene {
 
     // Create game over overlay
     this.gameOverElement = document.createElement('div');
+    // Save high score on game over
+    this.saveHighScore();
+    const isNewHighScore = this.score >= this.highScore && this.score > 0;
+
     this.gameOverElement.className = 'game-over-screen';
     this.gameOverElement.innerHTML = `
       <div class="game-over-content">
         <div class="game-over-title">GAME OVER</div>
         <div class="game-over-subtitle">You have fallen...</div>
+        <div class="game-over-score">Score: ${this.score}</div>
+        ${isNewHighScore ? '<div class="game-over-highscore new">NEW HIGH SCORE!</div>' : `<div class="game-over-highscore">High Score: ${this.highScore}</div>`}
         <div class="game-over-prompt">Press SPACE or J to restart</div>
       </div>
     `;
@@ -831,21 +1160,59 @@ export class GameScene {
       this.gameOverElement = null;
     }
 
+    // Clear all persistent state - fresh start
+    this.killedEnemies.clear();
+
+    // Reset score
+    this.score = 0;
+
     // Reset player
     this.player.health = this.player.maxHealth;
     this.player.stamina = this.player.maxStamina;
-    this.player.position = { x: 10, y: 10, z: 0 };
     this.player.velocity = { x: 0, y: 0 };
     this.player.verticalVelocity = 0;
     this.player.active = true;
     this.player.state = 'idle';
 
-    // Reset enemies
-    for (const enemy of this.enemies) {
-      enemy.aiState = 'patrol';
-    }
-
     this.gameOver = false;
+
+    // Reload from the starting level
+    this.loadLevel('courtyard');
+  }
+
+  private loadHighScore(): void {
+    try {
+      const stored = localStorage.getItem(GameScene.HIGHSCORE_KEY);
+      if (stored) {
+        this.highScore = parseInt(stored, 10) || 0;
+      }
+    } catch {
+      console.warn('Failed to load high score');
+    }
+  }
+
+  private saveHighScore(): void {
+    if (this.score > this.highScore) {
+      this.highScore = this.score;
+      try {
+        localStorage.setItem(GameScene.HIGHSCORE_KEY, this.highScore.toString());
+      } catch {
+        console.warn('Failed to save high score');
+      }
+    }
+  }
+
+  private addScore(points: number): void {
+    this.score += points;
+  }
+
+  private getEnemyScoreValue(maxHealth: number): number {
+    // Score based on enemy health: tougher enemies = more points
+    if (maxHealth >= 300) return 1000; // Boss
+    if (maxHealth >= 100) return 200;  // Oni
+    if (maxHealth >= 40) return 100;   // Guard
+    if (maxHealth >= 35) return 75;    // Archer
+    return 50; // Skeleton and weaker
   }
 
   setPaused(paused: boolean): void {

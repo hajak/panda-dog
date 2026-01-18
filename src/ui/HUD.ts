@@ -2,6 +2,79 @@
    SHADOW NINJA - HUD Component
    ============================================ */
 
+import { settings } from '../engine/Settings';
+
+function createSettingsPanel(): void {
+  if (document.getElementById('settings-panel')) return;
+
+  const settingsPanel = document.createElement('div');
+  settingsPanel.className = 'settings-panel';
+  settingsPanel.id = 'settings-panel';
+
+  const currentSettings = settings.get();
+
+  settingsPanel.innerHTML = `
+    <div class="panel">
+      <div class="panel__header">
+        <span class="panel__title">Settings</span>
+        <button class="settings-panel__close" id="settings-close">✕</button>
+      </div>
+      <div class="panel__body">
+        <div class="settings-section">
+          <h4 class="settings-section__title">Audio</h4>
+
+          <div class="settings-row">
+            <label class="settings-label">Music Volume</label>
+            <div class="settings-slider">
+              <input type="range" id="music-volume" min="0" max="100" value="${Math.round(currentSettings.musicVolume * 100)}" class="slider">
+              <span class="settings-value" id="music-volume-value">${Math.round(currentSettings.musicVolume * 100)}%</span>
+            </div>
+          </div>
+
+          <div class="settings-row">
+            <label class="settings-label">Effects Volume</label>
+            <div class="settings-slider">
+              <input type="range" id="effects-volume" min="0" max="100" value="${Math.round(currentSettings.effectsVolume * 100)}" class="slider">
+              <span class="settings-value" id="effects-volume-value">${Math.round(currentSettings.effectsVolume * 100)}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(settingsPanel);
+
+  // Add event listeners
+  const closeBtn = document.getElementById('settings-close');
+  closeBtn?.addEventListener('click', () => {
+    settingsPanel.classList.remove('settings-panel--visible');
+  });
+
+  const musicSlider = document.getElementById('music-volume') as HTMLInputElement;
+  const musicValue = document.getElementById('music-volume-value');
+  musicSlider?.addEventListener('input', () => {
+    const value = parseInt(musicSlider.value, 10);
+    settings.setMusicVolume(value / 100);
+    if (musicValue) musicValue.textContent = `${value}%`;
+  });
+
+  const effectsSlider = document.getElementById('effects-volume') as HTMLInputElement;
+  const effectsValue = document.getElementById('effects-volume-value');
+  effectsSlider?.addEventListener('input', () => {
+    const value = parseInt(effectsSlider.value, 10);
+    settings.setEffectsVolume(value / 100);
+    if (effectsValue) effectsValue.textContent = `${value}%`;
+  });
+}
+
+export function toggleSettings(): void {
+  const panel = document.getElementById('settings-panel');
+  if (panel) {
+    panel.classList.toggle('settings-panel--visible');
+  }
+}
+
 function createHelpPanel(): void {
   // Check if already exists
   if (document.getElementById('help-panel')) return;
@@ -33,6 +106,10 @@ function createHelpPanel(): void {
           <div class="help-row"><span class="help-key">E</span><span>Interact</span></div>
           <div class="help-row"><span class="help-key">1-3</span><span>Select item slot</span></div>
           <div class="help-row"><span class="help-key">Esc</span><span>Pause</span></div>
+        </div>
+        <div class="help-section">
+          <h4 class="help-section__title">Audio</h4>
+          <div class="help-row"><span class="help-key">M</span><span>Toggle music</span></div>
         </div>
         <div class="help-section">
           <h4 class="help-section__title">Debug</h4>
@@ -88,6 +165,12 @@ export function createHUD(): HTMLElement {
           </svg>
         </span>
         <span class="ammo-counter__value">5</span>
+      </div>
+
+      <!-- Score Counter -->
+      <div class="score-counter">
+        <span class="score-counter__label">SCORE</span>
+        <span class="score-counter__value" id="score-value">0</span>
       </div>
 
       <!-- Status Indicators -->
@@ -171,13 +254,15 @@ export function createHUD(): HTMLElement {
       </div>
     </div>
 
-    <!-- Version Display (top-right) -->
-    <div class="version-display">V2.0.1</div>
-
-    <!-- Debug Panel -->
-    <div class="debug-panel" style="display: none;">
-      <div class="debug-panel__row"><span class="debug-panel__label">FPS:</span> 60</div>
-      <div class="debug-panel__row"><span class="debug-panel__label">Pos:</span> 0, 0</div>
+    <!-- Top-right buttons -->
+    <div class="hud__top-right">
+      <button class="hud-button" id="settings-button" title="Settings">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M16.2 12.8l-.8-.5c.1-.5.1-1 0-1.5l.8-.5c.3-.2.4-.5.3-.8l-.8-1.4c-.1-.3-.4-.4-.7-.3l-.9.3c-.4-.3-.8-.6-1.3-.8l-.1-1c0-.3-.3-.5-.6-.5h-1.6c-.3 0-.6.2-.6.5l-.1 1c-.5.2-.9.5-1.3.8l-.9-.3c-.3-.1-.6 0-.7.3l-.8 1.4c-.1.3 0 .6.3.8l.8.5c-.1.5-.1 1 0 1.5l-.8.5c-.3.2-.4.5-.3.8l.8 1.4c.1.3.4.4.7.3l.9-.3c.4.3.8.6 1.3.8l.1 1c0 .3.3.5.6.5h1.6c.3 0 .6-.2.6-.5l.1-1c.5-.2.9-.5 1.3-.8l.9.3c.3.1.6 0 .7-.3l.8-1.4c.1-.3 0-.6-.3-.8z" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+      </button>
+      <div class="version-display">V2.6.0</div>
     </div>
 
     <!-- Press H for Help hint -->
@@ -186,7 +271,15 @@ export function createHUD(): HTMLElement {
 
   // Create help panel separately and append to body for proper z-index stacking
   createHelpPanel();
+  createSettingsPanel();
 
+  // Add settings button listener after container is added to DOM
+  setTimeout(() => {
+    const settingsBtn = document.getElementById('settings-button');
+    settingsBtn?.addEventListener('click', () => {
+      toggleSettings();
+    });
+  }, 0);
 
   return container;
 }

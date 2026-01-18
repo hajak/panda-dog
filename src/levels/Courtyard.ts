@@ -12,6 +12,7 @@ interface LevelData {
   enemySpawns: { type: string; x: number; y: number; patrol?: { x: number; y: number }[]; facing?: Direction8 }[];
   props: { type: string; x: number; y: number }[];
   interactables: { type: string; x: number; y: number; properties?: Record<string, unknown> }[];
+  exits?: { x: number; y: number; targetLevel: string; targetSpawn: { x: number; y: number } }[];
 }
 
 function createTile(type: TileType, elevation: number = 0, options: Partial<TileData> = {}): TileData {
@@ -220,12 +221,21 @@ export function createCourtyardLevel(): LevelData {
         y: 9.5,
         properties: { amount: 25 },
       },
-      // Lever for gate
+      // Lever for gate - linkedId matches auto-generated door id
       {
         type: 'lever',
         x: 3,
         y: 3,
-        properties: { linkedId: 'main_gate', state: 'off' },
+        properties: { linkedId: 'interact_door_4.5_5', state: 'off' },
+      },
+    ],
+    exits: [
+      // Exit to dungeon through the building door
+      {
+        x: 4.5,
+        y: 5,
+        targetLevel: 'dungeon',
+        targetSpawn: { x: 3, y: 3 },
       },
     ],
   };

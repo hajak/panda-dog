@@ -83,10 +83,20 @@ export class Projectile {
       this.graphics.lineTo(-length / 2 - 3, 3);
       this.graphics.stroke({ color: COLORS.ARROW, width: 1 });
     } else {
-      // Shuriken - 4-pointed star
-      const size = 6;
+      // Shuriken - 4-pointed star with glow
+      const size = 10;
+
+      // Outer glow
+      this.graphics.star(0, 0, 4, size + 4, (size + 4) / 2);
+      this.graphics.fill({ color: 0x00ffff, alpha: 0.3 });
+
+      // Main star
       this.graphics.star(0, 0, 4, size, size / 2);
       this.graphics.fill({ color: COLORS.SHURIKEN });
+
+      // Inner bright core
+      this.graphics.circle(0, 0, 2);
+      this.graphics.fill({ color: 0xffffff, alpha: 0.8 });
     }
   }
 
