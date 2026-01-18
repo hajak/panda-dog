@@ -52,6 +52,11 @@
   --color-border-subtle: rgba(255, 255, 255, 0.06);
   --color-border-default: rgba(255, 255, 255, 0.1);
   --color-border-strong: rgba(255, 255, 255, 0.16);
+  --color-border: rgba(255, 255, 255, 0.1);
+
+  /* Semantic colors */
+  --color-info: #3b82f6;
+  --color-error: #ef4444;
 
   /* === TYPOGRAPHY === */
 

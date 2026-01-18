@@ -1,22 +1,20 @@
 {
-  "name": "shadow-ninja",
-  "version": "2.6.0",
-  "description": "Modern isometric action/stealth platformer",
+  "name": "panda-dog",
+  "version": "2.0.0",
+  "description": "Panda & Dog - Cooperative puzzle game with asymmetric roles",
+  "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "test": "playwright test",
-    "test:ui": "playwright test --ui"
-  },
-  "dependencies": {
-    "pixi.js": "^8.6.6"
+    "dev": "concurrently \"pnpm run dev:server\" \"pnpm run dev:client\"",
+    "dev:client": "cd client && pnpm dev",
+    "dev:server": "cd server && pnpm dev",
+    "build": "pnpm run build:client && pnpm run build:server",
+    "build:client": "cd client && pnpm build",
+    "build:server": "cd server && pnpm build",
+    "start": "cd server && pnpm start",
+    "install:all": "pnpm install && cd client && pnpm install && cd ../server && pnpm install"
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0",
-    "serve": "^14.2.5",
-    "typescript": "^5.3.3",
-    "vite": "^5.4.0"
+    "concurrently": "^9.0.0"
   }
 }

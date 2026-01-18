@@ -52,14 +52,24 @@ const POSITIVE_KEYS = new Set([
   'ArrowDown',
 ]);
 
+export interface TouchInputProvider {
+  getState(): { moveX: number; moveY: number; interact: boolean; run: boolean };
+  isActive(): boolean;
+}
+
 export class Input {
   private state: InputState;
   private keysDown: Set<string> = new Set();
   private keysPressed: Set<string> = new Set();
+  private touchProvider: TouchInputProvider | null = null;
 
   constructor() {
     this.state = this.createEmptyState();
     this.setupListeners();
+  }
+
+  setTouchProvider(provider: TouchInputProvider | null): void {
+    this.touchProvider = provider;
   }
 
   private createEmptyState(): InputState {
@@ -154,6 +164,11 @@ export class Input {
       this.applyKeyToState(code, true);
     }
 
+    // Apply touch input if available
+    if (this.touchProvider?.isActive()) {
+      this.applyTouchInput(this.touchProvider.getState());
+    }
+
     // Clear pressed keys after processing
     this.keysPressed.clear();
   }
@@ -181,6 +196,25 @@ export class Input {
 
   getState(): Readonly<InputState> {
     return this.state;
+  }
+
+  /**
+   * Apply touch input on top of keyboard input
+   */
+  applyTouchInput(touch: { moveX: number; moveY: number; interact: boolean; run: boolean }): void {
+    if (touch.moveX !== 0) {
+      this.state.moveX = touch.moveX;
+    }
+    if (touch.moveY !== 0) {
+      this.state.moveY = touch.moveY;
+    }
+    if (touch.interact) {
+      this.state.interact = true;
+      this.state.interactPressed = true;
+    }
+    if (touch.run) {
+      this.state.run = true;
+    }
   }
 
   isKeyDown(code: string): boolean {
